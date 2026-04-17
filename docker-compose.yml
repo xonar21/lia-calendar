@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lia-calendar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lia_calendar
+      POSTGRES_USER: lia
+      POSTGRES_PASSWORD: lia
+    # Host port 5433 avoids clash with a local PostgreSQL install on :5432 (common on Windows).
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lia -d lia_calendar"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lia-calendar-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://lia:lia@postgres:5432/lia_calendar?schema=public
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

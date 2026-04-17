@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lia Calendar (Skeleton v1)
 
-## Getting Started
+Desktop-first skeleton of a task-oriented calendar app based on Figma.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 + TypeScript + App Router
+- Prisma + PostgreSQL
+- Tailwind CSS
+- Docker Compose for local startup
+- Auth: server-side Google OAuth 2.0 + HttpOnly JWT session (via `jose`)
+
+## Quick Start (Docker — fullstack)
+
+Runs PostgreSQL + Next.js app in containers:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env   # fill AUTH_SECRET (at least 32 chars), optionally Google creds
+docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Application: [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Dev Mode (only backend DB in Docker, app on host)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Preferred local workflow — fast hot reload while PostgreSQL stays in Docker.
 
-## Learn More
+```bash
+cp .env.example .env       # set AUTH_SECRET; Google creds are optional
+npm install
+npm run dev:setup          # starts postgres container + applies Prisma schema
+npm run dev                # starts Next.js with hot reload on http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+Helpful scripts:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev:db` — start only the `postgres` service (`docker compose up -d postgres`)
+- `npm run dev:db:stop` — stop the DB container
+- `npm run prisma:push` — sync Prisma schema to the DB (run after schema changes)
+- `npm run prisma:generate` — regenerate Prisma client
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Authentication
 
-## Deploy on Vercel
+- Google OAuth:
+  1. Create OAuth 2.0 Client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+  2. Add authorized redirect URI: `http://localhost:3000/api/auth/google/callback` (and production URL).
+  3. Fill `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` in `.env`.
+- Dev login: if `AUTH_ALLOW_DEV_LOGIN=true` (default in non-production), `/login` shows a simple email form at `POST /api/auth/dev`. Useful while you don't have Google credentials yet.
+- Sessions are stored in HttpOnly cookie `lia_session` (JWT signed with `AUTH_SECRET`, 30 days TTL).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Auth endpoints
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `GET /api/auth/google/start?next=/` — redirect to Google
+- `GET /api/auth/google/callback` — OAuth callback (sets session cookie)
+- `POST /api/auth/dev` — dev-only login (body: `{ email, name? }`)
+- `POST /api/auth/logout` — clear session
+- `GET /api/auth/me` — current user and available auth modes
+
+Unauthenticated users are redirected by middleware to `/login`. API calls without a session respond with `401`.
+
+## Current API Skeleton
+
+- `GET /api/health`
+- `GET|POST /api/categories`
+- `GET /api/calendar?from=<iso>&to=<iso>&categoryId=<optional>`
+- `POST /api/events`
+- `POST /api/tasks`
+- `POST /api/journals`
+- `POST /api/notes`
+- `GET|PUT /api/settings`
+
+## Troubleshooting
+
+- **`P1010` / «User was denied access» / `role "lia" does not exist`**: на порту **5432** часто уже крутится свой PostgreSQL (не из Docker). В `docker-compose.yml` Postgres проброшен на хост **`5433`**, в `.env` должен быть `...@127.0.0.1:5433/...`. После смены порта выполни `docker compose down` и снова `docker compose up -d postgres` (или `npm run dev:setup`).
+
+## Notes
+
+- Default categories are auto-created per user: `personal`, `work`, `health`.
+- Figma-accurate UI implementation continues screen-by-screen based on the agreed `node-id` list.

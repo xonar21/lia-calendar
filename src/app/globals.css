@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #e0dfda;
+  --foreground: #2a2a2a;
+
+  --lia-canvas: #e0dfda;
+  --lia-surface: #f6f6f6;
+  --lia-border: #d1cbbd;
+  --lia-border-soft: rgba(209, 203, 189, 0.6);
+  --lia-muted: #8d867f;
+  --lia-muted-soft: rgba(141, 134, 127, 0.7);
+
+  --lia-accent-warm: #7d5819;
+  --lia-accent-warm-soft: #f2bc62;
+  --lia-accent-warm-tint: #f8e5c6;
+
+  --lia-accent-cool: #5877a4;
+  --lia-accent-cool-soft: #77adc4;
+  --lia-accent-cool-tint: #d8e4ef;
+
+  --lia-accent-rose: #9d6f61;
+  --lia-accent-rose-soft: #e6b8ac;
+  --lia-accent-rose-tint: #f7ece7;
+
+  --lia-accent-sage: #7e9b8a;
+  --lia-accent-sage-tint: #d1d7d4;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-crimson), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-crimson), var(--font-geist-sans), Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease,
+    box-shadow 160ms ease, transform 160ms ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--lia-accent-warm) !important;
+  box-shadow: 0 0 0 3px rgba(125, 88, 25, 0.12);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(141, 134, 127, 0.28);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(141, 134, 127, 0.48);
+}
+
+@keyframes lia-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lia-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes lia-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lia-fade-in {
+  animation: lia-fade-in 180ms ease-out both;
+}
+
+.lia-pop-in {
+  animation: lia-pop-in 220ms ease-out both;
+}
+
+.lia-slide-in {
+  animation: lia-slide-in 220ms ease-out both;
 }

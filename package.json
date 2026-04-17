@@ -4,14 +4,27 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:db": "docker compose up -d postgres",
+    "dev:db:stop": "docker compose stop postgres",
+    "dev:setup": "docker compose up -d postgres && prisma db push",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
+    "date-fns": "^4.1.0",
+    "jose": "^6.2.2",
     "next": "16.2.4",
+    "pg": "^8.20.0",
+    "prisma": "^7.7.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
