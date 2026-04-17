@@ -56,7 +56,56 @@ Helpful scripts:
 - `POST /api/auth/logout` — clear session
 - `GET /api/auth/me` — current user and available auth modes
 
-Unauthenticated users are redirected by middleware to `/login`. API calls without a session respond with `401`.
+Unauthenticated users are redirected by the app proxy (`src/proxy.ts`) to `/login`. API calls without a session respond with `401`.
+
+## Deploying to Vercel (free tier)
+
+Vercel hosts the **Next.js app and API routes** on the [Hobby (free) plan](https://vercel.com/docs/plans/hobby). **PostgreSQL is not included** — use a free Postgres host (recommended: [Neon](https://neon.tech) or [Supabase](https://supabase.com)), then point `DATABASE_URL` at it.
+
+### Can the AI “deploy for you”?
+
+No account access from here: **you** connect GitHub → Vercel in the browser and paste env vars. The repo is already set up so `npm install` runs **`prisma generate`** via `postinstall` before `next build`.
+
+### Steps
+
+1. **Database (Neon — free tier)**  
+   - Create a project → copy the **connection string** (use **pooled** / “transaction” URL if Neon offers it for serverless).  
+   - From your machine (once), apply the schema to that database:
+     ```bash
+     set DATABASE_URL=postgresql://...neon...   # Windows cmd; use $env:DATABASE_URL=... in PowerShell
+     npx prisma db push
+     ```
+   - There are no `prisma/migrations` in this repo yet; `db push` is the right first-time sync.
+
+2. **Vercel**  
+   - Sign in at [vercel.com](https://vercel.com) → **Add New… → Project** → import [xonar21/lia-calendar](https://github.com/xonar21/lia-calendar) (or your fork).  
+   - Framework: **Next.js** (auto). Build: default (`next build`). Install command: default (`npm install`).
+
+3. **Environment variables** (Project → Settings → Environment Variables), for **Production** (and Preview if you use previews):
+
+   | Name | Notes |
+   |------|--------|
+   | `DATABASE_URL` | Neon/Supabase Postgres URL (`?sslmode=require` if required) |
+   | `AUTH_SECRET` | Long random string (e.g. `openssl rand -hex 32`) |
+   | `GOOGLE_CLIENT_ID` | Same as local |
+   | `GOOGLE_CLIENT_SECRET` | Same as local |
+   | `AUTH_ALLOW_DEV_LOGIN` | Set to `false` in production (recommended) |
+
+   Optional: `GOOGLE_REDIRECT_URI` — leave empty so the callback URL is derived from the request host (works for `*.vercel.app` once Google is configured).
+
+4. **Google OAuth**  
+   In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your Web client → **Authorized redirect URIs**, add:
+   - `https://YOUR-PROJECT.vercel.app/api/auth/google/callback`  
+   - If you use a custom domain, add that URL too.  
+   Publish the OAuth consent screen when you leave “Testing” if you need public sign-in.
+
+5. **Redeploy** after changing env vars (Deployments → … → Redeploy).
+
+### Free-tier expectations
+
+- **Cold starts** on the first request after idle time.  
+- **Hobby limits** on function duration, build minutes, and bandwidth — fine for a personal/small app.  
+- **No Docker Compose on Vercel** — only the Next.js app runs; the database stays on Neon/Supabase.
 
 ## Current API Skeleton
 
