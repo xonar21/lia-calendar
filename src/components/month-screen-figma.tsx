@@ -13,7 +13,7 @@ import {
 } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { CyclePopover } from "@/components/cycle-popover";
 import { UserMenu } from "@/components/user-menu";
@@ -26,8 +26,13 @@ const imgSportIcon = "https://www.figma.com/api/mcp/asset/124125cc-17a5-48df-bef
 const imgTaskIcon = "https://www.figma.com/api/mcp/asset/dd2b5917-2018-4c8d-9c13-9d6fdb49a64e";
 
 const categoryList = ["all", "personal", "work", "health"] as const;
-const weekDayLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
-const hours = Array.from({ length: 12 }, (_, index) => `${index === 0 ? 12 : index} AM`);
+const weekDayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
+const hours = Array.from({ length: 24 }, (_, i) => {
+  const suffix = i < 12 ? "AM" : "PM";
+  const h = i % 12 === 0 ? 12 : i % 12;
+  return `${h} ${suffix}`;
+});
+const ROW_H = 54; // px per hour slot
 
 const DEFAULT_CATEGORY_COLOR = "#b6af9d";
 const CATEGORY_PALETTE: Record<string, string> = {
@@ -62,6 +67,8 @@ type Entry = {
   bg: string;
   icon: string;
   category: AppCategory;
+  startMinutes: number;    // minutes from midnight, e.g. 540 = 9:00 AM
+  durationMinutes: number; // e.g. 60 for a 1-hour block
 };
 
 type JournalRecord = {
@@ -102,29 +109,35 @@ const seedEntries: Record<string, Entry[]> = {
     {
       id: "seed-workday",
       kind: "event",
-      time: "12AM",
+      time: "9AM",
       title: "start work day",
       bg: "#f8e5c6",
       icon: imgEventIcon,
       category: "work",
+      startMinutes: 9 * 60,
+      durationMinutes: 60,
     },
     {
       id: "seed-sport",
       kind: "event",
-      time: "12AM",
+      time: "7AM",
       title: "sport",
       bg: "#d1d7d4",
       icon: imgSportIcon,
       category: "health",
+      startMinutes: 7 * 60,
+      durationMinutes: 90,
     },
     {
       id: "seed-water",
       kind: "task",
-      time: "12AM",
+      time: "8AM",
       title: "drink water",
       bg: "#d1d7d4",
       icon: imgTaskIcon,
       category: "health",
+      startMinutes: 8 * 60,
+      durationMinutes: 30,
     },
   ],
 };
@@ -171,12 +184,12 @@ function joinDateTime(date: Date, hhmm: string) {
 
 function getMonthCells(anchorDate: Date) {
   const monthStart = startOfMonth(anchorDate);
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
   return Array.from({ length: 35 }, (_, idx) => addDays(gridStart, idx));
 }
 
 function getWeekCells(anchorDate: Date) {
-  const weekStart = startOfWeek(anchorDate, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(anchorDate, { weekStartsOn: 0 });
   return Array.from({ length: 7 }, (_, idx) => addDays(weekStart, idx));
 }
 
@@ -217,36 +230,133 @@ function SidebarIcon({ icon }: { icon: AppView }) {
 function TimeGrid({
   columnDates,
   onSlotClick,
+  entriesByDate,
+  selectedCategory,
 }: {
   columnDates: Date[];
   onSlotClick: (date: Date, time: string) => void;
+  entriesByDate: Record<string, Entry[]>;
+  selectedCategory: AppCategory;
 }) {
+  const totalH = ROW_H * 24;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 8 * ROW_H; // default to 8 AM
+    }
+  }, []);
+
   return (
-    <div
-      className="absolute left-[304px] right-[24px] top-[184px] grid overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_8px_24px_-12px_rgba(90,79,62,0.08)]"
-      style={{ gridTemplateColumns: `48px repeat(${columnDates.length}, minmax(0, 1fr))` }}
-    >
-      {hours.map((label, rowIndex) => (
-        <div key={`row-${label}`} className="contents">
-          <div className="flex h-[54px] items-start justify-end border-r border-b border-[var(--lia-border-soft)] pr-2 pt-2 text-[12px] uppercase tracking-wide text-[var(--lia-muted-soft)]">
-            {label}
-          </div>
-          {columnDates.map((date) => {
-            const hhmm = `${String(rowIndex).padStart(2, "0")}:00`;
-            return (
-              <button
-                key={`${toDateKey(date)}-${hhmm}`}
-                type="button"
-                onClick={() => onSlotClick(date, hhmm)}
-                className="group relative h-[54px] border-r border-b border-[var(--lia-border-soft)] transition hover:bg-[rgba(125,88,25,0.06)] focus:outline-none"
-                aria-label={`Create item ${toDateKey(date)} ${hhmm}`}
+    <div className="absolute left-[304px] right-[24px] top-[184px] bottom-[24px] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_8px_24px_-12px_rgba(90,79,62,0.08)]">
+      <div ref={scrollRef} className="h-full overflow-y-auto">
+        <div className="relative flex" style={{ height: `${totalH}px` }}>
+          {/* Time label column */}
+          <div className="relative w-[48px] shrink-0 border-r border-[var(--lia-border-soft)]">
+            {hours.map((label, i) => (
+              <div
+                key={label}
+                className="absolute right-0 flex w-[48px] items-start justify-end pr-2 pt-[6px] text-[10px] uppercase tracking-wide text-[var(--lia-muted-soft)]"
+                style={{ top: `${i * ROW_H}px`, height: `${ROW_H}px` }}
               >
-                <span className="pointer-events-none absolute inset-1 rounded-[8px] opacity-0 ring-1 ring-inset ring-[var(--lia-accent-warm)]/30 transition group-hover:opacity-100" />
-              </button>
+                {i === 0 ? "" : label}
+              </div>
+            ))}
+          </div>
+
+          {/* Day columns */}
+          {columnDates.map((date) => {
+            const dk = toDateKey(date);
+            const dayEntries = (entriesByDate[dk] ?? []).filter(
+              (e) => selectedCategory === "all" || e.category === selectedCategory,
+            );
+
+            return (
+              <div
+                key={dk}
+                className="relative flex-1 border-r border-[var(--lia-border-soft)] last:border-r-0"
+              >
+                {/* Clickable hour slots */}
+                {hours.map((_, i) => {
+                  const hhmm = `${String(i).padStart(2, "0")}:00`;
+                  return (
+                    <button
+                      key={hhmm}
+                      type="button"
+                      onClick={() => onSlotClick(date, hhmm)}
+                      className="absolute left-0 right-0 border-b border-[var(--lia-border-soft)] transition hover:bg-[rgba(125,88,25,0.04)] focus:outline-none"
+                      style={{ top: `${i * ROW_H}px`, height: `${ROW_H}px` }}
+                      aria-label={`Create item ${dk} ${hhmm}`}
+                    />
+                  );
+                })}
+
+                {/* Event / task blocks — sized by duration, overlapping ones side-by-side */}
+                {(() => {
+                  // Compute column layout for overlapping entries
+                  const placed: Array<{ entry: Entry; col: number; totalCols: number }> = [];
+                  for (const entry of dayEntries) {
+                    const eStart = entry.startMinutes;
+                    const eEnd = eStart + entry.durationMinutes;
+                    // Find all already-placed entries that overlap with this one
+                    const overlapping = placed.filter((p) => {
+                      const pStart = p.entry.startMinutes;
+                      const pEnd = pStart + p.entry.durationMinutes;
+                      return eStart < pEnd && eEnd > pStart;
+                    });
+                    // Pick first free column slot
+                    const usedCols = new Set(overlapping.map((p) => p.col));
+                    let col = 0;
+                    while (usedCols.has(col)) col++;
+                    // Max columns in this overlap group
+                    const totalCols = Math.max(col + 1, ...overlapping.map((p) => p.totalCols));
+                    // Update totalCols for all overlapping entries
+                    for (const p of overlapping) p.totalCols = totalCols;
+                    placed.push({ entry, col, totalCols });
+                  }
+                  return placed.map(({ entry, col, totalCols }) => {
+                    const top = (entry.startMinutes / 60) * ROW_H;
+                    const height = Math.max(22, (entry.durationMinutes / 60) * ROW_H);
+                    const accent = getCategoryColor(entry.category);
+                    const tall = height >= 44;
+                    const colW = 100 / totalCols;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="pointer-events-none absolute z-10 overflow-hidden rounded-[8px] px-[7px] shadow-[0_1px_4px_rgba(90,79,62,0.14)]"
+                        style={{
+                          top: `${top}px`,
+                          height: `${height}px`,
+                          left: `calc(${col * colW}% + 3px)`,
+                          width: `calc(${colW}% - 6px)`,
+                          background: entry.bg,
+                        }}
+                      >
+                        <div className="flex h-full items-start gap-[5px] overflow-hidden pt-[4px]">
+                          <span
+                            className="mt-[2px] h-[8px] w-[2px] shrink-0 rounded-full"
+                            style={{ background: accent }}
+                          />
+                          <span className="min-w-0 overflow-hidden">
+                            {tall && (
+                              <span className="block truncate text-[10px] leading-tight text-[#6b6258]">
+                                {entry.time}
+                              </span>
+                            )}
+                            <span className="block truncate text-[11px] leading-tight text-[#2c2722]">
+                              {entry.title}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
             );
           })}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
@@ -575,6 +685,7 @@ export function MonthScreenFigma() {
               id: string;
               title: string;
               startsAt: string;
+              endsAt?: string | null;
               categoryId?: string | null;
             }>;
             tasks?: Array<{
@@ -603,8 +714,11 @@ export function MonthScreenFigma() {
 
         events.forEach((eventItem) => {
           const eventDate = new Date(eventItem.startsAt);
+          const endDate = eventItem.endsAt ? new Date(eventItem.endsAt) : addHours(eventDate, 1);
           const key = toDateKey(eventDate);
           const category = categoryById[eventItem.categoryId ?? ""] ?? "personal";
+          const startMinutes = eventDate.getHours() * 60 + eventDate.getMinutes();
+          const durationMinutes = Math.max(30, Math.round((endDate.getTime() - eventDate.getTime()) / 60000));
           const item: Entry = {
             id: eventItem.id,
             kind: "event",
@@ -613,15 +727,21 @@ export function MonthScreenFigma() {
             bg: "#f8e5c6",
             icon: imgEventIcon,
             category,
+            startMinutes,
+            durationMinutes,
           };
           nextEntries[key] = [...(nextEntries[key] ?? []), item];
         });
 
         tasks.forEach((taskItem) => {
           const taskDate = new Date(taskItem.date);
+          const dueDate = taskItem.dueAt ? new Date(taskItem.dueAt) : null;
           const key = toDateKey(taskDate);
           const category = categoryById[taskItem.categoryId ?? ""] ?? "personal";
-          const humanTime = taskItem.dueAt ? toHumanTime(format(new Date(taskItem.dueAt), "HH:mm")) : "Anytime";
+          const humanTime = dueDate ? toHumanTime(format(dueDate, "HH:mm")) : "Anytime";
+          const startMinutes = dueDate
+            ? dueDate.getHours() * 60 + dueDate.getMinutes()
+            : 12 * 60; // default noon
           const item: Entry = {
             id: taskItem.id,
             kind: "task",
@@ -630,6 +750,8 @@ export function MonthScreenFigma() {
             bg: "#d1d7d4",
             icon: imgTaskIcon,
             category,
+            startMinutes,
+            durationMinutes: 30,
           };
           nextEntries[key] = [...(nextEntries[key] ?? []), item];
         });
@@ -803,6 +925,8 @@ export function MonthScreenFigma() {
       }
 
       if (createState.type === "event" || createState.type === "task") {
+        const [hhRaw = "0", mmRaw = "0"] = nowTime.split(":");
+        const startMinutes = Number(hhRaw) * 60 + Number(mmRaw);
         const nextEntry: Entry = {
           id: crypto.randomUUID(),
           kind: createState.type,
@@ -811,6 +935,8 @@ export function MonthScreenFigma() {
           bg: createState.type === "event" ? "#f8e5c6" : "#d1d7d4",
           icon: createState.type === "event" ? imgEventIcon : imgTaskIcon,
           category: selectedCategory === "all" ? "personal" : selectedCategory,
+          startMinutes,
+          durationMinutes: createState.type === "event" ? 60 : 30,
         };
         setEntriesByDate((prev) => ({
           ...prev,
@@ -1132,10 +1258,10 @@ export function MonthScreenFigma() {
                     </span>
                     <span
                       className={`grid h-[34px] w-[34px] place-items-center rounded-full text-[20px] transition ${
-                        selected
-                          ? "bg-[var(--lia-accent-rose)] text-white shadow-sm"
-                          : dayIsToday
-                            ? "bg-[var(--lia-accent-warm-tint)] text-[var(--lia-accent-warm)]"
+                        dayIsToday
+                          ? "bg-[#3d2b1c] text-white shadow-sm"
+                          : selected
+                            ? "bg-[var(--lia-accent-rose-soft)] text-white shadow-sm"
                             : "text-[#2f2a22] hover:bg-black/5"
                       }`}
                     >
@@ -1145,130 +1271,171 @@ export function MonthScreenFigma() {
                 );
               })}
             </div>
-            <TimeGrid columnDates={weekCells} onSlotClick={(date, time) => openCreate("event", date, time)} />
+            <TimeGrid
+              columnDates={weekCells}
+              onSlotClick={(date, time) => openCreate("event", date, time)}
+              entriesByDate={entriesByDate}
+              selectedCategory={selectedCategory}
+            />
           </>
         )}
 
         {view === "day" && (
           <>
-            <div className="absolute left-[304px] top-[120px]">
-              <h2 className="text-[32px] leading-[1.1] text-[var(--lia-accent-cool)]">
-                Today&apos;s Plan
-              </h2>
-              <p className="mt-1 text-[16px] text-[#7e90a9]">
-                Your schedule, notes and reflections for {format(selectedDate, "MMMM d")}
-              </p>
+            {/* Per-tab heading + subtitle */}
+            <div className="absolute left-[304px] top-[100px]">
+              {dayTab === "calendar" && (
+                <>
+                  <h2 className="text-[28px] leading-[1.1] text-[var(--lia-accent-cool)]">Today&apos;s Plan</h2>
+                  <p className="mt-[4px] text-[14px] text-[#7e90a9]">Your schedule and tasks for today</p>
+                </>
+              )}
+              {dayTab === "journal" && (
+                <>
+                  <h2 className="text-[28px] leading-[1.1] text-[var(--lia-accent-cool)]">Journal</h2>
+                  <p className="mt-[4px] text-[14px] text-[#7e90a9]">Write about your day, thoughts, and feelings</p>
+                </>
+              )}
+              {dayTab === "notes" && (
+                <>
+                  <h2 className="text-[28px] leading-[1.1] text-[var(--lia-accent-cool)]">Notes</h2>
+                  <p className="mt-[4px] text-[14px] text-[#7e90a9]">Quick notes pinned to {format(selectedDate, "MMMM d")}</p>
+                </>
+              )}
             </div>
-            <div className="absolute right-[24px] top-[130px] flex overflow-hidden rounded-full border border-[var(--lia-border)] bg-[var(--lia-surface)] p-[3px] shadow-[0_2px_6px_-2px_rgba(90,79,62,0.15)]">
-              {(["calendar", "journal", "notes"] as const).map((tab) => (
+
+            {/* Icon tab switcher */}
+            <div className="absolute right-[24px] top-[106px] flex items-center gap-[6px]">
+              {(
+                [
+                  {
+                    id: "calendar" as DayTab,
+                    label: "Schedule",
+                    icon: (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="1.5" y="2.5" width="13" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" />
+                        <path d="M1.5 6h13M5 1.5v2M11 1.5v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: "journal" as DayTab,
+                    label: "Journal",
+                    icon: (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M9.5 2H4a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6L9.5 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                        <path d="M9.5 2v4H13.5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                        <path d="M5.5 9.5h5M5.5 11.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      </svg>
+                    ),
+                  },
+                  {
+                    id: "notes" as DayTab,
+                    label: "Notes",
+                    icon: (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.3" />
+                        <path d="M4.5 5.5h7M4.5 8h7M4.5 10.5h4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      </svg>
+                    ),
+                  },
+                ] as const
+              ).map(({ id, label, icon }) => (
                 <button
-                  key={tab}
+                  key={id}
                   type="button"
-                  onClick={() => setDayTab(tab)}
-                  className={`flex h-[32px] w-[88px] items-center justify-center rounded-full text-[13px] capitalize transition ${
-                    dayTab === tab
-                      ? "bg-[var(--lia-accent-cool-soft)] text-white shadow-[0_2px_6px_-2px_rgba(88,119,164,0.5)]"
-                      : "text-[var(--lia-muted)] hover:text-[#3d362d]"
+                  aria-label={label}
+                  onClick={() => setDayTab(id)}
+                  className={`grid h-[36px] w-[36px] place-items-center rounded-[10px] border transition ${
+                    dayTab === id
+                      ? "border-transparent bg-[var(--lia-accent-cool-soft)] text-white shadow-[0_2px_8px_-3px_rgba(88,119,164,0.5)]"
+                      : "border-[var(--lia-border)] bg-[var(--lia-surface)] text-[var(--lia-muted)] hover:border-[var(--lia-accent-cool)]/40 hover:text-[var(--lia-accent-cool)]"
                   }`}
                 >
-                  {tab}
+                  {icon}
                 </button>
               ))}
             </div>
 
             {dayTab === "calendar" && (
-              <TimeGrid columnDates={[selectedDate]} onSlotClick={(date, time) => openCreate("event", date, time)} />
+              <TimeGrid
+                columnDates={[selectedDate]}
+                onSlotClick={(date, time) => openCreate("event", date, time)}
+                entriesByDate={entriesByDate}
+                selectedCategory={selectedCategory}
+              />
             )}
 
             {dayTab === "journal" && (
-              <section className="absolute left-[304px] right-[24px] top-[184px] h-[710px] rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] p-5 shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-[24px] leading-none text-[var(--lia-accent-cool)]">Journal</h3>
-                    <p className="mt-1 text-[13px] text-[var(--lia-muted)]">
-                      Thoughts and reflections for {format(selectedDate, "MMMM d")}
-                    </p>
-                  </div>
+              <section className="absolute left-[304px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
+                <div className="h-full overflow-y-auto p-6">
                   <button
                     type="button"
                     onClick={() => openCreate("journal", selectedDate)}
-                    className="rounded-full bg-[var(--lia-accent-cool-soft)] px-4 py-2 text-[13px] text-white shadow-[0_6px_16px_-8px_rgba(88,119,164,0.6)] hover:brightness-110"
+                    className="mb-5 w-full rounded-[12px] border border-dashed border-[var(--lia-border)] bg-white/60 py-3 text-[13px] text-[var(--lia-muted)] transition hover:border-[var(--lia-accent-cool)]/50 hover:text-[var(--lia-accent-cool)]"
                   >
-                    + Add entry
+                    + Write new entry
                   </button>
-                </div>
-                <div className="space-y-2 overflow-auto pr-1">
                   {selectedJournals.length === 0 && (
-                    <div className="grid h-[200px] place-items-center rounded-[12px] border border-dashed border-[var(--lia-border)] text-[14px] text-[var(--lia-muted)]">
+                    <div className="grid h-[160px] place-items-center text-[14px] text-[var(--lia-muted)]">
                       No journal entries for this day yet.
                     </div>
                   )}
-                  {selectedJournals.map((record) => (
-                    <article
-                      key={record.id}
-                      className="rounded-[12px] border border-[var(--lia-border-soft)] bg-white p-4 shadow-[0_1px_1px_rgba(90,79,62,0.03)]"
-                    >
-                      <div className="flex items-center gap-2 text-[12px] text-[var(--lia-muted)]">
-                        <span className="rounded-full bg-[var(--lia-accent-cool-tint)] px-2 py-0.5 text-[var(--lia-accent-cool)]">
-                          {record.createdAt}
-                        </span>
-                        {record.mood && (
-                          <span className="rounded-full bg-[var(--lia-accent-rose-tint)] px-2 py-0.5 text-[var(--lia-accent-rose)]">
-                            mood: {record.mood}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-2 text-[16px] leading-relaxed text-[#2a2a2a]">{record.content}</p>
-                    </article>
-                  ))}
+                  <div className="space-y-[2px]">
+                    {selectedJournals.map((record) => (
+                      <article key={record.id} className="rounded-[12px] bg-white px-5 py-4">
+                        <p className="text-[15px] leading-relaxed text-[#2a2a2a]">{record.content}</p>
+                        <div className="mt-3 flex items-center justify-between text-[12px] text-[var(--lia-muted)]">
+                          {record.mood ? (
+                            <span className="rounded-full bg-[var(--lia-accent-rose-tint)] px-2 py-0.5 text-[var(--lia-accent-rose)]">
+                              {record.mood}
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          <span>{record.createdAt}</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 </div>
               </section>
             )}
 
             {dayTab === "notes" && (
-              <section className="absolute left-[304px] right-[24px] top-[184px] h-[710px] rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] p-5 shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-[24px] leading-none text-[var(--lia-accent-cool)]">Notes</h3>
-                    <p className="mt-1 text-[13px] text-[var(--lia-muted)]">
-                      Quick notes pinned to {format(selectedDate, "MMMM d")}
-                    </p>
-                  </div>
+              <section className="absolute left-[304px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
+                <div className="h-full overflow-y-auto p-6">
                   <button
                     type="button"
                     onClick={() => openCreate("note", selectedDate)}
-                    className="rounded-full bg-[var(--lia-accent-cool-soft)] px-4 py-2 text-[13px] text-white shadow-[0_6px_16px_-8px_rgba(88,119,164,0.6)] hover:brightness-110"
+                    className="mb-5 w-full rounded-[12px] border border-dashed border-[var(--lia-border)] bg-white/60 py-3 text-[13px] text-[var(--lia-muted)] transition hover:border-[var(--lia-accent-cool)]/50 hover:text-[var(--lia-accent-cool)]"
                   >
-                    + Add note
+                    + Add new note
                   </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3 overflow-auto pr-1">
                   {selectedNotes.length === 0 && (
-                    <div className="col-span-2 grid h-[200px] place-items-center rounded-[12px] border border-dashed border-[var(--lia-border)] text-[14px] text-[var(--lia-muted)]">
+                    <div className="grid h-[160px] place-items-center text-[14px] text-[var(--lia-muted)]">
                       No notes for this day yet.
                     </div>
                   )}
-                  {selectedNotes.map((note) => {
-                    const accent = getCategoryColor(note.category);
-                    return (
-                      <article
-                        key={note.id}
-                        className="group overflow-hidden rounded-[12px] border border-[var(--lia-border-soft)] bg-white p-4 shadow-[0_1px_1px_rgba(90,79,62,0.03)] transition hover:-translate-y-[1px] hover:shadow-[0_10px_20px_-12px_rgba(90,79,62,0.2)]"
-                      >
-                        <div className="flex items-center gap-2 text-[12px] text-[var(--lia-muted)]">
-                          <span
-                            className="inline-block h-[8px] w-[8px] rounded-full"
-                            style={{ background: accent }}
-                          />
-                          <span>{note.createdAt}</span>
-                          <span className="text-[var(--lia-border)]">•</span>
-                          <span className="capitalize">{note.category}</span>
-                        </div>
-                        <h4 className="mt-1.5 text-[18px] leading-tight text-[#2d2d2d]">{note.title}</h4>
-                        <p className="mt-1 text-[14px] leading-relaxed text-[#5a524a]">{note.content}</p>
-                      </article>
-                    );
-                  })}
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedNotes.map((note) => {
+                      const accent = getCategoryColor(note.category);
+                      return (
+                        <article
+                          key={note.id}
+                          className="overflow-hidden rounded-[12px] bg-white p-4 shadow-[0_1px_3px_rgba(90,79,62,0.06)] transition hover:-translate-y-[1px] hover:shadow-[0_8px_20px_-10px_rgba(90,79,62,0.18)]"
+                        >
+                          <h4 className="text-[16px] leading-tight text-[#2d2d2d]">{note.title}</h4>
+                          <p className="mt-1 text-[13px] leading-relaxed text-[#5a524a]">{note.content}</p>
+                          <div className="mt-3 flex items-center gap-2 text-[11px] text-[var(--lia-muted)]">
+                            <span className="h-[7px] w-[7px] rounded-full" style={{ background: accent }} />
+                            <span className="capitalize">{note.category}</span>
+                            <span className="ml-auto">{note.createdAt}</span>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
                 </div>
               </section>
             )}
