@@ -7,7 +7,7 @@ import { useEffect } from "react";
 
 import type { CyclePhaseInfo } from "@/lib/cycle";
 
-const imgCycle = "https://www.figma.com/api/mcp/asset/fc0c0ecc-7b83-44c5-a032-4cecdaefd529";
+const imgCycle = "/icons/Pregnancy-Vagina--Streamline-Ultimate 1.svg";
 
 type Props = {
   isOpen: boolean;

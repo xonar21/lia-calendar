@@ -19,11 +19,8 @@ import { CyclePopover } from "@/components/cycle-popover";
 import { UserMenu } from "@/components/user-menu";
 import { computeCyclePhase, type CyclePhaseInfo } from "@/lib/cycle";
 
-const imgSettings = "https://www.figma.com/api/mcp/asset/5a98bf4e-f919-4652-b8b2-b0741acc6fee";
-const imgLogo = "https://www.figma.com/api/mcp/asset/c6101315-437e-4c97-9d22-78ff3d51b341";
-const imgEventIcon = "https://www.figma.com/api/mcp/asset/5e9d66b3-13e2-4533-ae5d-c39249ff6e8c";
-const imgSportIcon = "https://www.figma.com/api/mcp/asset/124125cc-17a5-48df-befe-315f6d5379f4";
-const imgTaskIcon = "https://www.figma.com/api/mcp/asset/dd2b5917-2018-4c8d-9c13-9d6fdb49a64e";
+const imgSettings = "/icons/Cog--Streamline-Ultimate 1.svg";
+const imgLogo = "/icons/Frame 140.svg";
 
 const categoryList = ["all", "personal", "work", "health"] as const;
 const weekDayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
@@ -65,7 +62,6 @@ type Entry = {
   time: string;
   title: string;
   bg: string;
-  icon: string;
   category: AppCategory;
   startMinutes: number;    // minutes from midnight, e.g. 540 = 9:00 AM
   durationMinutes: number; // e.g. 60 for a 1-hour block
@@ -87,6 +83,23 @@ type NoteRecord = {
   createdAt: string;
   category: AppCategory;
 };
+
+type DotEntity = {
+  id: string;
+  kind: "event" | "task" | "journal" | "note";
+  title: string;
+  time: string;
+  dotColor: string;
+  category: string;
+};
+
+type DotPopup = {
+  date: Date;
+  kind: "event" | "task" | "journal" | "note";
+  entities: DotEntity[];
+  x: number;
+  y: number;
+} | null;
 
 type CreateState = {
   type: CreateType;
@@ -112,7 +125,6 @@ const seedEntries: Record<string, Entry[]> = {
       time: "9AM",
       title: "start work day",
       bg: "#f8e5c6",
-      icon: imgEventIcon,
       category: "work",
       startMinutes: 9 * 60,
       durationMinutes: 60,
@@ -123,7 +135,6 @@ const seedEntries: Record<string, Entry[]> = {
       time: "7AM",
       title: "sport",
       bg: "#d1d7d4",
-      icon: imgSportIcon,
       category: "health",
       startMinutes: 7 * 60,
       durationMinutes: 90,
@@ -134,7 +145,6 @@ const seedEntries: Record<string, Entry[]> = {
       time: "8AM",
       title: "drink water",
       bg: "#d1d7d4",
-      icon: imgTaskIcon,
       category: "health",
       startMinutes: 8 * 60,
       durationMinutes: 30,
@@ -557,6 +567,7 @@ export function MonthScreenFigma() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [dotPopup, setDotPopup] = useState<DotPopup>(null);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -639,6 +650,13 @@ export function MonthScreenFigma() {
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
 
+  useEffect(() => {
+    if (!dotPopup) return;
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setDotPopup(null); };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [dotPopup]);
+
   const monthLabel = format(anchorDate, "MMMM yyyy");
   const monthCells = useMemo(() => getMonthCells(anchorDate), [anchorDate]);
   const weekCells = useMemo(() => getWeekCells(anchorDate), [anchorDate]);
@@ -649,6 +667,31 @@ export function MonthScreenFigma() {
   );
   const selectedJournals = journals.filter((journal) => journal.dateKey === dateKey);
   const selectedNotes = notes.filter((note) => note.dateKey === dateKey);
+
+  const dotsByDate = useMemo(() => {
+    const result: Record<string, DotEntity[]> = {};
+    Object.entries(entriesByDate).forEach(([key, dayEntries]) => {
+      dayEntries.forEach((entry) => {
+        result[key] = [
+          ...(result[key] ?? []),
+          { id: entry.id, kind: entry.kind, title: entry.title, time: entry.time, dotColor: getCategoryColor(entry.category), category: entry.category },
+        ];
+      });
+    });
+    journals.forEach((j) => {
+      result[j.dateKey] = [
+        ...(result[j.dateKey] ?? []),
+        { id: j.id, kind: "journal", title: j.content.slice(0, 60), time: j.createdAt, dotColor: "#9d6f61", category: "journal" },
+      ];
+    });
+    notes.forEach((n) => {
+      result[n.dateKey] = [
+        ...(result[n.dateKey] ?? []),
+        { id: n.id, kind: "note", title: n.title, time: n.createdAt, dotColor: getCategoryColor(n.category), category: n.category },
+      ];
+    });
+    return result;
+  }, [entriesByDate, journals, notes]);
 
   useEffect(() => {
     const loadCalendar = async () => {
@@ -725,7 +768,6 @@ export function MonthScreenFigma() {
             time: toHumanTime(format(eventDate, "HH:mm")),
             title: eventItem.title,
             bg: "#f8e5c6",
-            icon: imgEventIcon,
             category,
             startMinutes,
             durationMinutes,
@@ -748,7 +790,6 @@ export function MonthScreenFigma() {
             time: humanTime,
             title: taskItem.title,
             bg: "#d1d7d4",
-            icon: imgTaskIcon,
             category,
             startMinutes,
             durationMinutes: 30,
@@ -933,7 +974,6 @@ export function MonthScreenFigma() {
           time: toHumanTime(nowTime),
           title: createState.title,
           bg: createState.type === "event" ? "#f8e5c6" : "#d1d7d4",
-          icon: createState.type === "event" ? imgEventIcon : imgTaskIcon,
           category: selectedCategory === "all" ? "personal" : selectedCategory,
           startMinutes,
           durationMinutes: createState.type === "event" ? 60 : 30,
@@ -1161,18 +1201,24 @@ export function MonthScreenFigma() {
                 const isCurrentMonth = isSameMonth(date, anchorDate);
                 const isSelected = isSameDay(date, selectedDate);
                 const dayIsToday = isToday(date);
-                const entries =
-                  entriesByDate[toDateKey(date)]?.filter(
-                    (entry) => selectedCategory === "all" || entry.category === selectedCategory,
-                  ) ?? [];
+                const dots = (dotsByDate[toDateKey(date)] ?? []).filter(
+                  (e) => selectedCategory === "all" || e.category === selectedCategory || e.kind === "journal",
+                );
 
                 return (
-                  <button
+                  <div
                     key={toDateKey(date)}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedDate(date)}
                     onDoubleClick={() => openCreate(undefined, date)}
-                    className="group relative h-[170px] min-w-0 text-left focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedDate(date);
+                      }
+                    }}
+                    className="group relative h-[170px] min-w-0 cursor-pointer text-left focus:outline-none"
                   >
                     <div
                       className="absolute inset-0 transition group-hover:brightness-[0.98]"
@@ -1197,43 +1243,47 @@ export function MonthScreenFigma() {
                       </span>
                     </div>
 
-                    {entries.length > 0 && (
-                      <div className="absolute left-[9px] right-[9px] top-[46px] flex flex-col gap-[4px]">
-                        {entries.slice(0, 3).map((entry) => {
-                          const accent = getCategoryColor(entry.category);
-                          return (
-                            <div
-                              key={entry.id}
-                              className="flex items-center gap-[6px] rounded-[8px] px-[8px] py-[5px] shadow-[0_1px_1px_rgba(90,79,62,0.04)]"
-                              style={{ background: entry.bg }}
-                            >
-                              <span
-                                className="h-[10px] w-[3px] shrink-0 rounded-full"
-                                style={{ background: accent }}
-                              />
-                              <Image
-                                alt=""
-                                src={entry.icon}
-                                width={16}
-                                height={12}
-                                unoptimized
-                                className="h-[12px] w-[16px] shrink-0"
-                              />
-                              <p className="truncate text-[12px] leading-tight text-[#2c2722]">
-                                <span className="text-[11px] text-[#6b6258]">{entry.time}</span>{" "}
-                                {entry.title}
-                              </p>
-                            </div>
-                          );
-                        })}
-                        {entries.length > 3 && (
-                          <p className="pl-1 text-[10px] text-[var(--lia-muted)]">
-                            +{entries.length - 3} more
-                          </p>
+                    {dots.length > 0 && (
+                      <div className="absolute left-[32px] top-[59px] flex items-center gap-[12px]">
+                        {dots.slice(0, 4).map((dot) => (
+                          <div
+                            key={dot.id}
+                            role="button"
+                            tabIndex={0}
+                            className="h-[16px] w-[16px] shrink-0 cursor-pointer rounded-full transition-transform hover:scale-110 focus:outline-none"
+                            style={{ background: dot.dotColor }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setDotPopup({
+                                date,
+                                kind: dot.kind,
+                                entities: dots.filter((d) => d.kind === dot.kind),
+                                x: rect.right + 10,
+                                y: rect.top - 8,
+                              });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDotPopup({
+                                  date,
+                                  kind: dot.kind,
+                                  entities: dots.filter((d) => d.kind === dot.kind),
+                                  x: rect.right + 10,
+                                  y: rect.top - 8,
+                                });
+                              }
+                            }}
+                          />
+                        ))}
+                        {dots.length > 4 && (
+                          <span className="text-[12px] font-light text-[#424242]">+{dots.length - 4}</span>
                         )}
                       </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -1441,6 +1491,58 @@ export function MonthScreenFigma() {
             )}
           </>
         )}
+
+        {dotPopup && (() => {
+          const kindLabel = dotPopup.kind === "event" ? "Events" : dotPopup.kind === "task" ? "Tasks" : dotPopup.kind === "journal" ? "Journal" : "Notes";
+          const countLabel = dotPopup.kind === "event" ? "events" : dotPopup.kind === "task" ? "tasks" : dotPopup.kind === "journal" ? "entries" : "notes";
+          return (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setDotPopup(null)} />
+              <div
+                className="fixed z-50 w-[258px] overflow-hidden rounded-[12px] border-t-[3px] border-solid border-[#b7c181] bg-[#f4f1ec] font-[family-name:var(--font-crimson)]"
+                style={{ left: dotPopup.x, top: dotPopup.y }}
+              >
+                <div className="flex items-baseline justify-between px-[20px] pb-[16px] pt-[20px]">
+                  <span className="text-[20px] font-medium leading-none text-[#b7c181]">
+                    {kindLabel}
+                  </span>
+                  <span className="text-[12px] text-[#7e7e7e]">
+                    {dotPopup.entities.length} {countLabel}
+                  </span>
+                </div>
+
+                <div className="px-[20px] pb-[16px] pt-[19px]">
+                  <div className="flex flex-col gap-[9px]">
+                    {dotPopup.entities.map((entity) => (
+                      <div key={entity.id} className="flex items-center gap-[8px]">
+                        <span className="h-[10px] w-[10px] shrink-0 rounded-full" style={{ background: entity.dotColor }} />
+                        <span className="shrink-0 text-[12px] text-black">{entity.time}</span>
+                        <span className="truncate text-[12px] text-black">{entity.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="px-[20px] pb-[20px] pt-[19px]">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      className="text-[14px] text-[#b7c181] transition-opacity hover:opacity-70 focus:outline-none"
+                      onClick={() => {
+                        setSelectedDate(dotPopup.date);
+                        setView("day");
+                        setDotPopup(null);
+                      }}
+                    >
+                      View all for {format(dotPopup.date, "d MMM")}
+                    </button>
+                    <span className="text-[14px] text-[#b7c181]">→</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         <CreateModal
           isOpen={isCreateOpen}

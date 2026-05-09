@@ -4,8 +4,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-const imgAvatarFallback = "https://www.figma.com/api/mcp/asset/3138ddd0-a3b9-4ce1-9805-782031ca3c42";
-
 type Me = {
   id: string;
   email: string;
@@ -70,8 +68,6 @@ export function UserMenu() {
     .slice(0, 2)
     .map((chunk) => chunk[0]?.toUpperCase() ?? "")
     .join("") || "U";
-  const src = me?.imageUrl || imgAvatarFallback;
-
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -81,13 +77,16 @@ export function UserMenu() {
         className="flex h-[40px] w-[40px] items-center justify-center overflow-hidden rounded-full ring-2 ring-white/60 transition hover:ring-[var(--lia-accent-warm)]/40"
       >
         {me?.imageUrl ? (
-          <Image src={src} alt="" width={40} height={40} unoptimized className="h-[40px] w-[40px]" />
+          <Image src={me.imageUrl} alt="" width={40} height={40} unoptimized className="h-[40px] w-[40px]" />
         ) : me ? (
           <span className="flex h-full w-full items-center justify-center bg-[var(--lia-accent-warm-tint)] text-[14px] font-medium text-[var(--lia-accent-warm)]">
             {initials}
           </span>
         ) : (
-          <Image src={imgAvatarFallback} alt="" width={40} height={40} unoptimized className="h-[40px] w-[40px]" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[var(--lia-muted)]">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M4 21C4 17.6863 6.68629 15 10 15H14C17.3137 15 20 17.6863 20 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         )}
       </button>
 

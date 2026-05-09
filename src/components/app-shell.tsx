@@ -8,9 +8,6 @@ import { CyclePopover } from "@/components/cycle-popover";
 import { UserMenu } from "@/components/user-menu";
 import { computeCyclePhase, type CyclePhaseInfo } from "@/lib/cycle";
 
-const imgLogo = "https://www.figma.com/api/mcp/asset/c6101315-437e-4c97-9d22-78ff3d51b341";
-const imgSettings = "https://www.figma.com/api/mcp/asset/5a98bf4e-f919-4652-b8b2-b0741acc6fee";
-
 type NavKey = "calendar" | "settings" | "cycle";
 
 type Props = {
@@ -60,14 +57,7 @@ export function AppShell({ activeNav, title, subtitle, rightSlot, children }: Pr
       <div className="relative mx-auto flex min-h-screen w-full">
         <aside className="sticky top-0 flex h-screen w-[295px] shrink-0 flex-col border-r border-[var(--lia-border-soft)] px-[20px] pt-[26px]">
           <Link href="/" className="ml-[20px] block">
-            <Image
-              src={imgLogo}
-              alt="by Lia"
-              width={174}
-              height={65}
-              unoptimized
-              className="h-[65px] w-[174px]"
-            />
+            <Image src="/icons/Frame 140.svg" alt="by Lia" width={202} height={78} unoptimized className="h-[78px] w-[202px]" />
           </Link>
 
           <nav className="mt-[120px] flex flex-col gap-[2px]">
@@ -122,7 +112,7 @@ export function AppShell({ activeNav, title, subtitle, rightSlot, children }: Pr
                 }`}
                 aria-label="Settings"
               >
-                <Image src={imgSettings} alt="" width={24} height={24} unoptimized className="h-[24px] w-[24px]" />
+                <Image src="/icons/Cog--Streamline-Ultimate 1.svg" alt="" width={24} height={24} unoptimized className="h-[24px] w-[24px]" />
               </Link>
               <UserMenu />
             </div>

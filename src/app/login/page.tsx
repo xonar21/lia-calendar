@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 
-const imgLogo = "https://www.figma.com/api/mcp/asset/c6101315-437e-4c97-9d22-78ff3d51b341";
+const imgLogo = "/icons/Frame 140.svg";
 
 type MeResponse = {
   user: { id: string; email: string } | null;
