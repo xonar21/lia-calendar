@@ -27,13 +27,6 @@
   --lia-accent-sage-tint: #d1d7d4;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-crimson), var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 html,
 body {
   background: var(--background);
