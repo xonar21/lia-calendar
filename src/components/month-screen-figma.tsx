@@ -595,7 +595,6 @@ export function MonthScreenFigma() {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [categoryIds, setCategoryIds] = useState<Record<string, string>>({});
   const [userCategories, setUserCategories] = useState<string[]>([...categoryList]);
-  const [newCategoryName, setNewCategoryName] = useState("");
   const [createState, setCreateState] = useState<CreateState>({
     type: "event",
     title: "",
@@ -937,28 +936,6 @@ export function MonthScreenFigma() {
     return response;
   };
 
-  const onAddCategory = async () => {
-    const value = newCategoryName.trim().toLowerCase();
-    if (!value || value === "all") {
-      setToast({ kind: "error", message: "Invalid category name" });
-      return;
-    }
-    if (userCategories.includes(value)) {
-      setToast({ kind: "error", message: "Category already exists" });
-      return;
-    }
-
-    try {
-      await postJson("/api/categories", { name: value });
-      setUserCategories((prev) => [...prev, value]);
-      setNewCategoryName("");
-      setRefreshTick((prev) => prev + 1);
-      setToast({ kind: "success", message: "Category created" });
-    } catch {
-      setToast({ kind: "error", message: "Cannot create category" });
-    }
-  };
-
   const onCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCreateState((prev) => ({ ...prev, loading: true, error: "" }));
@@ -1123,53 +1100,25 @@ export function MonthScreenFigma() {
             </p>
           </div>
           <div className="absolute left-[24px] top-[557px] flex w-[280px] flex-col gap-[6px]">
-            {userCategories.map((category) => {
+              {userCategories.map((category) => {
               const active = selectedCategory === category;
-              const color = getCategoryColor(category);
               return (
                 <button
                   key={category}
                   type="button"
                   onClick={() => setSelectedCategory(category)}
-                  className={`flex h-[44px] w-full items-center gap-[10px] rounded-[12px] px-[14px] text-left text-[18px] font-[family-name:var(--font-crimson)] transition ${
+                  className={`flex h-[44px] w-full items-center rounded-[12px] px-[14px] text-left text-[18px] font-[family-name:var(--font-crimson)] transition ${
                     active
                       ? "bg-[#d5d2cb] font-medium text-[#2f2a22]"
                       : "font-light text-[#5a524a] hover:bg-white/40"
                   }`}
                 >
-                  <span
-                    className="h-[16px] w-[16px] rounded-full"
-                    style={{
-                      background: category === "all" ? "transparent" : color,
-                      border: category === "all" ? "1.5px dashed var(--lia-muted-soft)" : "none",
-                    }}
-                  />
                   <span className="flex-1 truncate">
                     {category[0].toUpperCase() + category.slice(1)}
                   </span>
                 </button>
               );
             })}
-            <form
-              className="mt-[6px] flex items-center gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void onAddCategory();
-              }}
-            >
-              <input
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                placeholder="new category"
-                className="min-w-0 flex-1 rounded-full border border-[var(--lia-border)] bg-white px-3 py-1.5 text-[12px] placeholder:text-[var(--lia-muted-soft)]"
-              />
-              <button
-                type="submit"
-                className="rounded-full border border-[var(--lia-accent-warm)]/30 bg-[var(--lia-accent-warm-tint)] px-3 py-1.5 text-[12px] text-[var(--lia-accent-warm)] hover:brightness-105"
-              >
-                add
-              </button>
-            </form>
           </div>
         </aside>
 
