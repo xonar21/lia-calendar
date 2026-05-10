@@ -204,27 +204,78 @@ function shiftAnchor(date: Date, view: AppView, direction: 1 | -1) {
 }
 
 function SidebarIcon({ icon }: { icon: AppView }) {
-  const stroke = "#000000";
   if (icon === "month") {
     return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <rect x="1.25" y="2.25" width="11.5" height="10.5" rx="1.5" stroke={stroke} strokeWidth="1" />
-        <path d="M1.5 5H12.5M4.25 1.5V3.5M9.75 1.5V3.5" stroke={stroke} strokeWidth="1" />
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g clipPath="url(#month-clip)">
+          <path d="M10.6665 14.8146H1.77765C1.62049 14.8146 1.46976 14.7521 1.35862 14.641C1.24749 14.5299 1.18506 14.3791 1.18506 14.222V2.96271C1.18506 2.80554 1.24749 2.65482 1.35862 2.54368C1.46976 2.43255 1.62049 2.37012 1.77765 2.37012H14.2221C14.3793 2.37012 14.53 2.43255 14.6411 2.54368C14.7523 2.65482 14.8147 2.80554 14.8147 2.96271V10.0738" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M4.14819 1.18555V4.14851" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M11.8518 1.18555V4.14851" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M1.18506 5.3335H14.8147" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14.8149 10.0742V14.2224C14.8149 14.3795 14.7525 14.5303 14.6413 14.6414C14.5302 14.7525 14.3795 14.815 14.2223 14.815H10.6667" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        </g>
+        <defs>
+          <clipPath id="month-clip"><rect width="16" height="16" fill="white"/></clipPath>
+        </defs>
       </svg>
     );
   }
   if (icon === "week") {
     return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <rect x="1.25" y="1.25" width="11.5" height="11.5" rx="1.5" stroke={stroke} strokeWidth="1" />
-        <path d="M1.5 4.5H12.5M1.5 7H12.5M1.5 9.5H12.5" stroke={stroke} strokeWidth="1" />
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g clipPath="url(#week-clip)">
+          <path d="M10.6665 14.8146H1.77765C1.62049 14.8146 1.46976 14.7521 1.35862 14.641C1.24749 14.5299 1.18506 14.3791 1.18506 14.222V2.96271C1.18506 2.80554 1.24749 2.65482 1.35862 2.54368C1.46976 2.43255 1.62049 2.37012 1.77765 2.37012H14.2221C14.3793 2.37012 14.53 2.43255 14.6411 2.54368C14.7523 2.65482 14.8147 2.80554 14.8147 2.96271V10.0738" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M4.14819 1.18555V4.14851" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M11.8518 1.18555V4.14851" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M1.18506 5.3335H14.8147" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14.8149 10.0742V14.2224C14.8149 14.3795 14.7525 14.5303 14.6413 14.6414C14.5302 14.7525 14.3795 14.815 14.2223 14.815H10.6667" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.25928 7.40771H3.85187" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M5.03711 7.40771H5.6297" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M6.81494 7.40771H7.40753" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8.59253 7.40771H9.18512" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M10.3704 7.40771H10.963" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12.1482 7.40771H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.25928 9.18555H3.85187" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M5.03711 9.18555H5.6297" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M6.81494 9.18555H7.40753" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8.59253 9.18555H9.18512" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M10.3704 9.18555H10.963" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12.1482 9.18555H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.25928 10.9629H3.85187" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M5.03711 10.9629H5.6297" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M6.81494 10.9629H7.40753" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8.59253 10.9629H9.18512" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M10.3704 10.9629H10.963" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12.1482 10.9629H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3.25928 12.7407H3.85187" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M5.03711 12.7407H5.6297" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M6.81494 12.7407H7.40753" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8.59253 12.7407H9.18512" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M10.3704 12.7407H10.963" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12.1482 12.7407H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        </g>
+        <defs>
+          <clipPath id="week-clip"><rect width="16" height="16" fill="white"/></clipPath>
+        </defs>
       </svg>
     );
   }
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <rect x="1.25" y="1.25" width="11.5" height="11.5" rx="1.5" stroke={stroke} strokeWidth="1" />
-      <path d="M3.25 4.25H10.75M3.25 7H10.75M3.25 9.75H8.75" stroke={stroke} strokeWidth="1" />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g clipPath="url(#day-clip)">
+        <path d="M10.6665 14.8146H1.77765C1.62049 14.8146 1.46976 14.7521 1.35862 14.641C1.24749 14.5299 1.18506 14.3791 1.18506 14.222V2.96271C1.18506 2.80554 1.24749 2.65482 1.35862 2.54368C1.46976 2.43255 1.62049 2.37012 1.77765 2.37012H14.2221C14.3793 2.37012 14.53 2.43255 14.6411 2.54368C14.7523 2.65482 14.8147 2.80554 14.8147 2.96271V10.0738" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M4.14819 1.18555V4.14851" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M11.8518 1.18555V4.14851" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M1.18506 5.3335H14.8147" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14.8149 10.0742V14.2224C14.8149 14.3795 14.7525 14.5303 14.6413 14.6414C14.5302 14.7525 14.3795 14.815 14.2223 14.815H10.6667" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3.25928 7.40771H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3.25928 9.18555H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3.25928 10.9629H12.7408" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3.25928 12.7407H8.00002" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+      </g>
+      <defs>
+        <clipPath id="day-clip"><rect width="16" height="16" fill="white"/></clipPath>
+      </defs>
     </svg>
   );
 }
@@ -250,7 +301,7 @@ function TimeGrid({
   }, []);
 
   return (
-    <div className="absolute left-[335px] right-[24px] top-[184px] bottom-[24px] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_8px_24px_-12px_rgba(90,79,62,0.08)]">
+    <div className="absolute left-[368px] right-[24px] top-[184px] bottom-[24px] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_8px_24px_-12px_rgba(90,79,62,0.08)]">
       <div ref={scrollRef} className="h-full overflow-y-auto">
         <div className="relative flex" style={{ height: `${totalH}px` }}>
           {/* Time label column */}
@@ -849,13 +900,6 @@ export function MonthScreenFigma() {
     void loadCalendar();
   }, [view, selectedDate, selectedCategory, monthCells, weekCells, categoryIds, categoryById, refreshTick]);
 
-  const addButtonStyle =
-    view === "day"
-      ? { bg: "#81acc1", text: "#e8f0f5" }
-      : view === "week"
-        ? { bg: "#c18181", text: "#f5eaea" }
-        : { bg: "#b7c181", text: "#eef3e6" };
-
   const currentNodeId =
     view === "week"
       ? "1182:1597"
@@ -1025,44 +1069,45 @@ export function MonthScreenFigma() {
         className="relative h-screen w-full overflow-hidden bg-[var(--lia-canvas)]"
         data-node-id={currentNodeId}
       >
-        <aside className="absolute left-0 top-0 flex h-full w-[295px] flex-col border-r border-[var(--lia-border-soft)]">
+        <aside className="absolute left-0 top-0 flex h-full w-[328px] flex-col border-r border-[var(--lia-border-soft)]">
           <Image
             src={imgLogo}
             alt="by Lia"
             width={174}
             height={65}
             unoptimized
-            className="absolute left-[40px] top-[26px] h-[65px] w-[174px]"
+            className="absolute left-[63px] top-[40px] h-[65px] w-[174px]"
           />
 
           <button
             type="button"
             onClick={() => openCreate()}
-            className="absolute left-[20px] top-[157px] flex h-[68px] w-[255px] items-center justify-center rounded-[16px] shadow-[0_8px_20px_-10px_rgba(90,79,62,0.35)] transition hover:brightness-105 active:translate-y-[1px]"
-            style={{ background: addButtonStyle.bg }}
+            className="absolute left-[24px] top-[190px] flex h-[59px] w-[280px] items-center justify-center rounded-[16px] bg-[#f2bc62] shadow-[0_8px_20px_-10px_rgba(90,79,62,0.35)] transition hover:brightness-105 active:translate-y-[1px]"
           >
-            <span className="text-[28px] leading-[0.95]" style={{ color: addButtonStyle.text }}>
-              + Add something
+            <span className="text-[24px] leading-[0.95] font-[family-name:var(--font-crimson)] text-[#f8e5c6]">
+              Add something
             </span>
           </button>
 
-          <div className="absolute left-[20px] top-[252px] flex flex-col gap-[2px]">
+          <div className="absolute left-[24px] top-[289px] flex flex-col gap-[6px]">
             {(["month", "week", "day"] as const).map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setView(item)}
-                className={`group flex w-[255px] items-center gap-[10px] rounded-[12px] px-[14px] py-[11px] text-left transition ${
+                className={`flex h-[44px] w-[280px] items-center rounded-[12px] px-[14px] text-left transition ${
                   view === item
-                    ? "bg-white/70 shadow-[0_1px_2px_rgba(90,79,62,0.06)]"
+                    ? "bg-[#d5d2cb]"
                     : "hover:bg-white/40"
                 }`}
               >
-                <span className="inline-flex h-[16px] w-[16px] items-center justify-center text-[var(--lia-accent-warm)]">
+                <span className={`inline-flex h-[16px] w-[16px] items-center justify-center ${
+                  view === item ? "text-[#2f2a22]" : "text-[var(--lia-muted)]"
+                }`}>
                   <SidebarIcon icon={item} />
                 </span>
                 <span
-                  className={`text-[16px] ${
+                  className={`ml-[10px] text-[18px] font-[family-name:var(--font-crimson)] ${
                     view === item ? "font-medium text-[#2f2a22]" : "font-light text-[#5a524a]"
                   }`}
                 >
@@ -1072,12 +1117,12 @@ export function MonthScreenFigma() {
             ))}
           </div>
 
-          <div className="absolute left-[34px] top-[472px] w-[255px]">
-            <p className="text-[12px] font-medium tracking-[0.18em] text-[var(--lia-accent-warm)]">
+          <div className="absolute left-[24px] top-[513px] w-[280px]">
+            <p className="text-[18px] font-medium tracking-[1.62px] text-[var(--lia-accent-warm)] font-[family-name:var(--font-crimson)]">
               CATEGORIES
             </p>
           </div>
-          <div className="absolute left-[20px] top-[504px] flex w-[255px] flex-col gap-[2px]">
+          <div className="absolute left-[24px] top-[557px] flex w-[280px] flex-col gap-[6px]">
             {userCategories.map((category) => {
               const active = selectedCategory === category;
               const color = getCategoryColor(category);
@@ -1086,14 +1131,14 @@ export function MonthScreenFigma() {
                   key={category}
                   type="button"
                   onClick={() => setSelectedCategory(category)}
-                  className={`flex w-full items-center gap-[10px] rounded-[12px] px-[14px] py-[9px] text-left text-[15px] transition ${
+                  className={`flex h-[44px] w-full items-center gap-[10px] rounded-[12px] px-[14px] text-left text-[18px] font-[family-name:var(--font-crimson)] transition ${
                     active
-                      ? "bg-white/70 shadow-[0_1px_2px_rgba(90,79,62,0.06)] font-medium text-[#2f2a22]"
+                      ? "bg-[#d5d2cb] font-medium text-[#2f2a22]"
                       : "font-light text-[#5a524a] hover:bg-white/40"
                   }`}
                 >
                   <span
-                    className="h-[10px] w-[10px] rounded-full"
+                    className="h-[16px] w-[16px] rounded-full"
                     style={{
                       background: category === "all" ? "transparent" : color,
                       border: category === "all" ? "1.5px dashed var(--lia-muted-soft)" : "none",
@@ -1106,7 +1151,7 @@ export function MonthScreenFigma() {
               );
             })}
             <form
-              className="mt-2 flex items-center gap-2 px-[2px]"
+              className="mt-[6px] flex items-center gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
                 void onAddCategory();
@@ -1128,7 +1173,7 @@ export function MonthScreenFigma() {
           </div>
         </aside>
 
-        <header className="absolute left-[335px] right-[40px] top-[44px] flex h-[50px] items-center justify-between">
+        <header className="absolute left-[368px] right-[40px] top-[44px] flex h-[50px] items-center justify-between">
           <div className="flex w-full items-center mr-[78px]">
             <h1
               className={`leading-none font-[family-name:var(--font-crimson)] ${
@@ -1137,7 +1182,7 @@ export function MonthScreenFigma() {
             >
               {view === "day" ? format(anchorDate, "EEEE, MMMM d, yyyy") : monthLabel}
             </h1>
-            <div className="ml-[55px] flex items-center gap-[12px]">
+            <div className="absolute left-[200px] flex items-center gap-[6px]">
               <button
                 type="button"
                 onClick={() => setAnchorDate((prev) => shiftAnchor(prev, view, -1))}
@@ -1193,7 +1238,7 @@ export function MonthScreenFigma() {
         </header>
 
         {calendarLoadError && (
-          <p className="lia-slide-in absolute left-[335px] top-[104px] text-[13px] text-[#9b4d4d]">
+          <p className="lia-slide-in absolute left-[368px] top-[104px] text-[13px] text-[#9b4d4d]">
             {calendarLoadError}
           </p>
         )}
@@ -1213,7 +1258,7 @@ export function MonthScreenFigma() {
         {view === "month" && (
           <>
             <div
-              className="absolute left-[335px] right-[40px] top-[138px] grid"
+              className="absolute left-[368px] right-[40px] top-[138px] grid"
               style={{ gridTemplateColumns: 'repeat(7, minmax(0, 216px))' }}
             >
               {weekDayLabels.map((label) => (
@@ -1226,7 +1271,7 @@ export function MonthScreenFigma() {
             </div>
 
             <div
-              className="absolute left-[335px] right-[40px] top-[190px] bottom-[24px] grid grid-rows-5 divide-x divide-y divide-[var(--lia-border-soft)] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_32px_-16px_rgba(90,79,62,0.12)]"
+              className="absolute left-[368px] right-[40px] top-[190px] bottom-[24px] grid grid-rows-5 divide-x divide-y divide-[var(--lia-border-soft)] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_32px_-16px_rgba(90,79,62,0.12)]"
               style={{ gridTemplateColumns: 'repeat(7, minmax(0, 216px))' }}
             >
               {monthCells.map((date) => {
@@ -1346,7 +1391,7 @@ export function MonthScreenFigma() {
 
         {view === "week" && (
           <>
-            <div className="absolute left-[335px] right-[24px] top-[130px] grid grid-cols-7 pl-[48px]">
+            <div className="absolute left-[368px] right-[24px] top-[130px] grid grid-cols-7 pl-[48px]">
               {weekCells.map((date) => {
                 const selected = isSameDay(date, selectedDate);
                 const dayIsToday = isToday(date);
@@ -1387,7 +1432,7 @@ export function MonthScreenFigma() {
         {view === "day" && (
           <>
             {/* Per-tab heading + subtitle */}
-            <div className="absolute left-[335px] top-[100px]">
+            <div className="absolute left-[368px] top-[100px]">
               {dayTab === "calendar" && (
                 <>
                   <h2 className="text-[28px] leading-[1.1] text-[var(--lia-accent-cool)]">Today&apos;s Plan</h2>
@@ -1471,7 +1516,7 @@ export function MonthScreenFigma() {
             )}
 
             {dayTab === "journal" && (
-              <section className="absolute left-[335px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
+              <section className="absolute left-[368px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
                 <div className="h-full overflow-y-auto p-6">
                   <button
                     type="button"
@@ -1507,7 +1552,7 @@ export function MonthScreenFigma() {
             )}
 
             {dayTab === "notes" && (
-              <section className="absolute left-[335px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
+              <section className="absolute left-[368px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
                 <div className="h-full overflow-y-auto p-6">
                   <button
                     type="button"
