@@ -25,8 +25,10 @@ export async function POST(request: Request) {
         userId: user.id,
         categoryId: payload.categoryId,
         title: payload.title,
+        description: payload.description,
         date: new Date(payload.date),
         dueAt: payload.dueAt ? new Date(payload.dueAt) : null,
+        urgency: payload.urgency,
         isCompleted: payload.isCompleted,
       },
     });

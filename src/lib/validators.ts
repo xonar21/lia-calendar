@@ -31,8 +31,10 @@ export const createEventSchema = z
 export const createTaskSchema = z.object({
   categoryId: z.string().cuid().optional(),
   title: z.string().min(1).max(160),
+  description: z.string().max(5000).optional(),
   date: z.string().datetime(),
   dueAt: z.string().datetime().optional(),
+  urgency: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
   isCompleted: z.boolean().default(false),
 });
 

@@ -13,10 +13,11 @@ import {
 } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CyclePopover } from "@/components/cycle-popover";
 import { UserMenu } from "@/components/user-menu";
+import { CreateEntityModal, type CreateType } from "@/components/CreateEntityModal";
 import { computeCyclePhase, type CyclePhaseInfo } from "@/lib/cycle";
 
 const imgSettings = "/icons/Cog--Streamline-Ultimate 1.svg";
@@ -61,8 +62,6 @@ const ENTITY_DOT_COLORS: Record<string, string> = {
 type AppView = "month" | "week" | "day";
 type AppCategory = string;
 type DayTab = "calendar" | "journal" | "notes";
-type CreateType = "event" | "task" | "journal" | "note";
-
 type Entry = {
   id: string;
   kind: "event" | "task";
@@ -111,17 +110,6 @@ type DotPopup = {
 type DayDotsInfo = {
   kinds: Record<string, DotEntity[]>;
   totalCount: number;
-};
-
-type CreateState = {
-  type: CreateType;
-  title: string;
-  description: string;
-  mood: string;
-  useTime: boolean;
-  time: string;
-  loading: boolean;
-  error: string;
 };
 
 type ToastState = {
@@ -414,173 +402,6 @@ function TimeGrid({
   );
 }
 
-function CreateModal({
-  isOpen,
-  state,
-  selectedDate,
-  selectedCategory,
-  onClose,
-  onChange,
-  onSubmit,
-}: {
-  isOpen: boolean;
-  state: CreateState;
-  selectedDate: Date;
-  selectedCategory: AppCategory;
-  onClose: () => void;
-  onChange: (next: Partial<CreateState>) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-}) {
-  if (!isOpen) return null;
-
-  const typePalette: Record<CreateType, { bg: string; text: string; dot: string }> = {
-    event: { bg: "#eef3e6", text: "#5a7a4a", dot: "#b7c181" },
-    task: { bg: "#e8f0f5", text: "#4a6a8a", dot: "#81acc1" },
-    journal: { bg: "#f0eaf5", text: "#6a4f8a", dot: "#a381c1" },
-    note: { bg: "#f5eaea", text: "#8a4a4a", dot: "#c18181" },
-  };
-
-  return (
-    <div
-      className="lia-fade-in absolute inset-0 z-30 flex items-center justify-center bg-[rgba(30,25,20,0.28)] backdrop-blur-[2px]"
-      onClick={onClose}
-    >
-      <div
-        className="lia-pop-in w-[560px] overflow-hidden rounded-[20px] border border-[var(--lia-border)] bg-[var(--lia-surface)] shadow-[0_24px_60px_-20px_rgba(30,25,20,0.35)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between border-b border-[var(--lia-border-soft)] px-6 py-5">
-          <div>
-            <h3 className="text-[26px] leading-none text-[var(--lia-accent-warm)]">Create new</h3>
-            <p className="mt-2 text-[13px] text-[var(--lia-muted)]">
-              {format(selectedDate, "EEEE, MMMM d, yyyy")}
-              <span className="mx-2 text-[var(--lia-border)]">•</span>
-              category:{" "}
-              <span className="font-medium text-[#3d362d]">
-                {selectedCategory === "all" ? "none" : selectedCategory}
-              </span>
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-full text-[16px] text-[var(--lia-muted)] hover:bg-black/5"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="px-6 pt-5">
-          <div className="flex flex-wrap gap-2">
-            {(["event", "task", "journal", "note"] as const).map((type) => {
-              const active = state.type === type;
-              const palette = typePalette[type];
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => onChange({ type })}
-                  className={`flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] capitalize ${
-                    active
-                      ? "border-transparent shadow-sm"
-                      : "border-[var(--lia-border)] bg-white text-[var(--lia-muted)] hover:border-[var(--lia-accent-warm)]/40 hover:text-[#3d362d]"
-                  }`}
-                  style={
-                    active
-                      ? { background: palette.bg, color: palette.text }
-                      : undefined
-                  }
-                >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ background: palette.dot }}
-                  />
-                  {type}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <form onSubmit={onSubmit} className="space-y-3 px-6 pb-6 pt-4">
-          {state.type !== "journal" && (
-            <input
-              value={state.title}
-              onChange={(event) => onChange({ title: event.target.value })}
-              placeholder="Title"
-              className="w-full rounded-[12px] border border-[var(--lia-border)] bg-white px-3.5 py-2.5 text-[15px] placeholder:text-[var(--lia-muted-soft)]"
-              required
-            />
-          )}
-
-          {state.type === "journal" && (
-            <input
-              value={state.mood}
-              onChange={(event) => onChange({ mood: event.target.value })}
-              placeholder="Mood (optional) — e.g. calm, focused, tired"
-              className="w-full rounded-[12px] border border-[var(--lia-border)] bg-white px-3.5 py-2.5 text-[15px] placeholder:text-[var(--lia-muted-soft)]"
-            />
-          )}
-
-          <textarea
-            value={state.description}
-            onChange={(event) => onChange({ description: event.target.value })}
-            placeholder={state.type === "journal" ? "Write down what's on your mind..." : "Description (optional)"}
-            className="h-[112px] w-full resize-none rounded-[12px] border border-[var(--lia-border)] bg-white px-3.5 py-2.5 text-[15px] placeholder:text-[var(--lia-muted-soft)]"
-          />
-
-          {(state.type === "event" || state.type === "task" || state.type === "note") && (
-            <div className="flex flex-wrap items-center gap-3">
-              {state.type !== "event" && (
-                <label className="flex items-center gap-2 text-[13px] text-[var(--lia-muted)]">
-                  <input
-                    type="checkbox"
-                    checked={state.useTime}
-                    onChange={(event) => onChange({ useTime: event.target.checked })}
-                    className="h-4 w-4 accent-[var(--lia-accent-warm)]"
-                  />
-                  bind to time
-                </label>
-              )}
-              {(state.type === "event" || state.useTime) && (
-                <input
-                  type="time"
-                  value={state.time}
-                  onChange={(event) => onChange({ time: event.target.value })}
-                  className="rounded-[12px] border border-[var(--lia-border)] bg-white px-3 py-2 text-[14px]"
-                  required={state.type === "event"}
-                />
-              )}
-            </div>
-          )}
-
-          {state.error && (
-            <p className="rounded-[10px] bg-[#f7dddd] px-3 py-2 text-[13px] text-[#963838]">{state.error}</p>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-[var(--lia-border)] bg-white px-5 py-2 text-[14px] text-[var(--lia-muted)] hover:border-[var(--lia-accent-warm)]/40 hover:text-[#3d362d]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={state.loading}
-              className="rounded-full bg-[var(--lia-accent-warm)] px-5 py-2 text-[14px] text-white shadow-[0_6px_16px_-8px_rgba(125,88,25,0.6)] hover:brightness-110 disabled:opacity-60"
-            >
-              {state.loading ? "Saving..." : "Create"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export function MonthScreenFigma() {
   const [view, setView] = useState<AppView>("month");
   const [anchorDate, setAnchorDate] = useState<Date>(new Date(2026, 3, 14));
@@ -595,16 +416,6 @@ export function MonthScreenFigma() {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [categoryIds, setCategoryIds] = useState<Record<string, string>>({});
   const [userCategories, setUserCategories] = useState<string[]>([...categoryList]);
-  const [createState, setCreateState] = useState<CreateState>({
-    type: "event",
-    title: "",
-    description: "",
-    mood: "",
-    useTime: true,
-    time: "09:00",
-    loading: false,
-    error: "",
-  });
   const [calendarLoadError, setCalendarLoadError] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
@@ -908,19 +719,9 @@ export function MonthScreenFigma() {
           ? "1176:5607"
           : "1173:4548";
 
-  const openCreate = (type?: CreateType, date?: Date, time?: string) => {
+  const openCreate = (type?: CreateType, date?: Date, _time?: string) => {
     setDotPopup(null);
     if (date) setSelectedDate(date);
-    setCreateState((prev) => ({
-      ...prev,
-      type: type ?? prev.type,
-      time: time ?? prev.time,
-      title: "",
-      description: "",
-      mood: "",
-      error: "",
-      loading: false,
-    }));
     setCreateOpen(true);
   };
 
@@ -936,108 +737,106 @@ export function MonthScreenFigma() {
     return response;
   };
 
-  const onCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setCreateState((prev) => ({ ...prev, loading: true, error: "" }));
-
+  const handleCreateSubmit = async (type: CreateType, data: Record<string, any>) => {
     const selectedCategoryId =
       selectedCategory !== "all" ? categoryIds[selectedCategory] : undefined;
-    const nowTime = createState.time || "09:00";
-    const at = joinDateTime(selectedDate, nowTime);
 
-    try {
-      if (createState.type === "event") {
-        const payload = {
-          categoryId: selectedCategoryId,
-          title: createState.title,
-          description: createState.description || undefined,
-          startsAt: at.toISOString(),
-          endsAt: addHours(at, 1).toISOString(),
-          urgency: "MEDIUM",
-        };
-        await postJson("/api/events", payload);
-      }
+    if (type === "event") {
+      const startDateTime = joinDateTime(data.date, data.startTime);
+      const endDateTime = joinDateTime(data.date, data.endTime);
 
-      if (createState.type === "task") {
-        const payload = {
-          categoryId: selectedCategoryId,
-          title: createState.title,
-          date: selectedDate.toISOString(),
-          dueAt: createState.useTime ? at.toISOString() : undefined,
-          isCompleted: false,
-        };
-        await postJson("/api/tasks", payload);
-      }
-
-      if (createState.type === "journal") {
-        const payload = {
-          date: selectedDate.toISOString(),
-          content: createState.description || "Journal note",
-          mood: createState.mood || undefined,
-        };
-        await postJson("/api/journals", payload);
-        setJournals((prev) => [
-          {
-            id: crypto.randomUUID(),
-            dateKey,
-            content: payload.content,
-            mood: payload.mood,
-            createdAt: format(new Date(), "HH:mm"),
-          },
-          ...prev,
-        ]);
-      }
-
-      if (createState.type === "note") {
-        const payload = {
-          categoryId: selectedCategoryId,
-          title: createState.title,
-          content: createState.description || "",
-          date: selectedDate.toISOString(),
-          pinnedAt: createState.useTime ? at.toISOString() : undefined,
-        };
-        await postJson("/api/notes", payload);
-        setNotes((prev) => [
-          {
-            id: crypto.randomUUID(),
-            dateKey,
-            title: payload.title,
-            content: payload.content,
-            createdAt: format(new Date(), "HH:mm"),
-            category: selectedCategory === "all" ? "personal" : selectedCategory,
-          },
-          ...prev,
-        ]);
-      }
-
-      if (createState.type === "event" || createState.type === "task") {
-        const [hhRaw = "0", mmRaw = "0"] = nowTime.split(":");
-        const startMinutes = Number(hhRaw) * 60 + Number(mmRaw);
-        const nextEntry: Entry = {
-          id: crypto.randomUUID(),
-          kind: createState.type,
-          time: toHumanTime(nowTime),
-          title: createState.title,
-          bg: createState.type === "event" ? "#eef3e6" : "#e8f0f5",
-          category: selectedCategory === "all" ? "personal" : selectedCategory,
-          startMinutes,
-          durationMinutes: createState.type === "event" ? 60 : 30,
-        };
-        setEntriesByDate((prev) => ({
-          ...prev,
-          [dateKey]: [...(prev[dateKey] ?? []), nextEntry],
-        }));
-      }
-
-      setRefreshTick((prev) => prev + 1);
-      setCreateOpen(false);
-      setToast({ kind: "success", message: `${createState.type} created` });
-    } catch {
-      setToast({ kind: "error", message: "Create request failed" });
-      setCreateState((prev) => ({ ...prev, error: "Failed to create item. Please try again." }));
-    } finally {
-      setCreateState((prev) => ({ ...prev, loading: false }));
+      await postJson("/api/events", {
+        title: data.title,
+        description: data.description || undefined,
+        startsAt: startDateTime.toISOString(),
+        endsAt: endDateTime.toISOString(),
+        categoryId: data.categoryId || undefined,
+        urgency: data.urgency,
+      });
     }
+
+    if (type === "task") {
+      const payload: Record<string, any> = {
+        categoryId: selectedCategoryId || data.categoryId || undefined,
+        title: data.title,
+        description: data.description || undefined,
+        date: data.date.toISOString(),
+        isCompleted: false,
+        urgency: data.urgency,
+      };
+      if (data.hasTime && data.dueTime) {
+        payload.dueAt = joinDateTime(data.date, data.dueTime).toISOString();
+      }
+      await postJson("/api/tasks", payload);
+    }
+
+    if (type === "journal") {
+      const payload: Record<string, any> = {
+        date: selectedDate.toISOString(),
+        content: data.content,
+        mood: data.mood || undefined,
+      };
+      if (data.activeMs) payload.activeMs = data.activeMs;
+      if (data.idleMs) payload.idleMs = data.idleMs;
+      await postJson("/api/journals", payload);
+      setJournals((prev) => [
+        {
+          id: crypto.randomUUID(),
+          dateKey,
+          content: payload.content,
+          mood: payload.mood,
+          createdAt: format(new Date(), "HH:mm"),
+        },
+        ...prev,
+      ]);
+    }
+
+    if (type === "note") {
+      const payload: Record<string, any> = {
+        categoryId: selectedCategoryId || data.categoryId || undefined,
+        title: data.title,
+        content: data.content,
+        date: data.date.toISOString(),
+      };
+      if (data.pinnedAt) {
+        payload.pinnedAt = data.pinnedAt.toISOString();
+      }
+      await postJson("/api/notes", payload);
+      setNotes((prev) => [
+        {
+          id: crypto.randomUUID(),
+          dateKey,
+          title: payload.title,
+          content: payload.content,
+          createdAt: format(new Date(), "HH:mm"),
+          category: selectedCategory === "all" ? "personal" : selectedCategory,
+        },
+        ...prev,
+      ]);
+    }
+
+    if (type === "event" || type === "task") {
+      const dataTime = (type === "event" ? data.startTime : data.dueTime) || "09:00";
+      const [hhRaw = "0", mmRaw = "0"] = dataTime.split(":");
+      const startMinutes = Number(hhRaw) * 60 + Number(mmRaw);
+      const nextEntry: Entry = {
+        id: crypto.randomUUID(),
+        kind: type,
+        time: toHumanTime(dataTime),
+        title: data.title,
+        bg: type === "event" ? "#eef3e6" : "#e8f0f5",
+        category: selectedCategory === "all" ? "personal" : selectedCategory,
+        startMinutes,
+        durationMinutes: type === "event" ? 60 : 30,
+      };
+      setEntriesByDate((prev) => ({
+        ...prev,
+        [dateKey]: [...(prev[dateKey] ?? []), nextEntry],
+      }));
+    }
+
+    setRefreshTick((prev) => prev + 1);
+    setToast({ kind: "success", message: `${type} created` });
   };
 
   return (
@@ -1592,14 +1391,12 @@ export function MonthScreenFigma() {
           );
         })()}
 
-        <CreateModal
+        <CreateEntityModal
           isOpen={isCreateOpen}
-          state={createState}
           selectedDate={selectedDate}
           selectedCategory={selectedCategory}
           onClose={() => setCreateOpen(false)}
-          onChange={(next) => setCreateState((prev) => ({ ...prev, ...next, error: "" }))}
-          onSubmit={onCreateSubmit}
+          onSubmit={handleCreateSubmit}
         />
       </div>
     </div>
