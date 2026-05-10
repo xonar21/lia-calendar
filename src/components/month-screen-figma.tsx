@@ -51,6 +51,13 @@ function getCategoryColor(name: string) {
   return `hsl(${hue}, 42%, 58%)`;
 }
 
+const ENTITY_DOT_COLORS: Record<string, string> = {
+  event: "#b7c181",
+  task: "#81acc1",
+  journal: "#a381c1",
+  note: "#c18181",
+};
+
 type AppView = "month" | "week" | "day";
 type AppCategory = string;
 type DayTab = "calendar" | "journal" | "notes";
@@ -101,6 +108,11 @@ type DotPopup = {
   y: number;
 } | null;
 
+type DayDotsInfo = {
+  kinds: Record<string, DotEntity[]>;
+  totalCount: number;
+};
+
 type CreateState = {
   type: CreateType;
   title: string;
@@ -124,7 +136,7 @@ const seedEntries: Record<string, Entry[]> = {
       kind: "event",
       time: "9AM",
       title: "start work day",
-      bg: "#f8e5c6",
+      bg: "#eef3e6",
       category: "work",
       startMinutes: 9 * 60,
       durationMinutes: 60,
@@ -134,7 +146,7 @@ const seedEntries: Record<string, Entry[]> = {
       kind: "event",
       time: "7AM",
       title: "sport",
-      bg: "#d1d7d4",
+      bg: "#eef3e6",
       category: "health",
       startMinutes: 7 * 60,
       durationMinutes: 90,
@@ -144,7 +156,7 @@ const seedEntries: Record<string, Entry[]> = {
       kind: "task",
       time: "8AM",
       title: "drink water",
-      bg: "#d1d7d4",
+      bg: "#e8f0f5",
       category: "health",
       startMinutes: 8 * 60,
       durationMinutes: 30,
@@ -152,26 +164,6 @@ const seedEntries: Record<string, Entry[]> = {
   ],
 };
 
-const seedJournals: JournalRecord[] = [
-  {
-    id: "j-seed-1",
-    dateKey: "2026-04-14",
-    content: "Утро продуктивное, хочу сосредоточиться на ключевых задачах.",
-    mood: "motivated",
-    createdAt: "08:32",
-  },
-];
-
-const seedNotes: NoteRecord[] = [
-  {
-    id: "n-seed-1",
-    dateKey: "2026-04-14",
-    title: "Покупки",
-    content: "Овсянка, бананы, йогурт, орехи",
-    createdAt: "09:15",
-    category: "personal",
-  },
-];
 
 function toDateKey(date: Date) {
   return format(date, "yyyy-MM-dd");
@@ -258,7 +250,7 @@ function TimeGrid({
   }, []);
 
   return (
-    <div className="absolute left-[304px] right-[24px] top-[184px] bottom-[24px] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_8px_24px_-12px_rgba(90,79,62,0.08)]">
+    <div className="absolute left-[335px] right-[24px] top-[184px] bottom-[24px] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_8px_24px_-12px_rgba(90,79,62,0.08)]">
       <div ref={scrollRef} className="h-full overflow-y-auto">
         <div className="relative flex" style={{ height: `${totalH}px` }}>
           {/* Time label column */}
@@ -391,10 +383,10 @@ function CreateModal({
   if (!isOpen) return null;
 
   const typePalette: Record<CreateType, { bg: string; text: string; dot: string }> = {
-    event: { bg: "var(--lia-accent-warm-tint)", text: "var(--lia-accent-warm)", dot: "#e8b95e" },
-    task: { bg: "var(--lia-accent-sage-tint)", text: "#4c6a59", dot: "#7e9b8a" },
-    journal: { bg: "var(--lia-accent-cool-tint)", text: "var(--lia-accent-cool)", dot: "#77adc4" },
-    note: { bg: "var(--lia-accent-rose-tint)", text: "var(--lia-accent-rose)", dot: "#9d6f61" },
+    event: { bg: "#eef3e6", text: "#5a7a4a", dot: "#b7c181" },
+    task: { bg: "#e8f0f5", text: "#4a6a8a", dot: "#81acc1" },
+    journal: { bg: "#f0eaf5", text: "#6a4f8a", dot: "#a381c1" },
+    note: { bg: "#f5eaea", text: "#8a4a4a", dot: "#c18181" },
   };
 
   return (
@@ -546,9 +538,9 @@ export function MonthScreenFigma() {
   const [isCycleCardOpen, setCycleCardOpen] = useState(false);
   const [cyclePhase, setCyclePhase] = useState<CyclePhaseInfo>(computeCyclePhase(null));
   const [dayTab, setDayTab] = useState<DayTab>("calendar");
-  const [entriesByDate, setEntriesByDate] = useState<Record<string, Entry[]>>(seedEntries);
-  const [journals, setJournals] = useState<JournalRecord[]>(seedJournals);
-  const [notes, setNotes] = useState<NoteRecord[]>(seedNotes);
+  const [entriesByDate, setEntriesByDate] = useState<Record<string, Entry[]>>({});
+  const [journals, setJournals] = useState<JournalRecord[]>([]);
+  const [notes, setNotes] = useState<NoteRecord[]>([]);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [categoryIds, setCategoryIds] = useState<Record<string, string>>({});
   const [userCategories, setUserCategories] = useState<string[]>([...categoryList]);
@@ -568,6 +560,7 @@ export function MonthScreenFigma() {
   const [settingsHydrated, setSettingsHydrated] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [dotPopup, setDotPopup] = useState<DotPopup>(null);
+  const dotPopupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -654,7 +647,16 @@ export function MonthScreenFigma() {
     if (!dotPopup) return;
     const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setDotPopup(null); };
     window.addEventListener("keydown", onEsc);
-    return () => window.removeEventListener("keydown", onEsc);
+    const onClick = (e: MouseEvent) => {
+      if (dotPopupRef.current && !dotPopupRef.current.contains(e.target as Node)) {
+        setDotPopup(null);
+      }
+    };
+    document.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("keydown", onEsc);
+      document.removeEventListener("click", onClick);
+    };
   }, [dotPopup]);
 
   const monthLabel = format(anchorDate, "MMMM yyyy");
@@ -669,26 +671,47 @@ export function MonthScreenFigma() {
   const selectedNotes = notes.filter((note) => note.dateKey === dateKey);
 
   const dotsByDate = useMemo(() => {
-    const result: Record<string, DotEntity[]> = {};
+    const result: Record<string, DayDotsInfo> = {};
     Object.entries(entriesByDate).forEach(([key, dayEntries]) => {
       dayEntries.forEach((entry) => {
-        result[key] = [
-          ...(result[key] ?? []),
-          { id: entry.id, kind: entry.kind, title: entry.title, time: entry.time, dotColor: getCategoryColor(entry.category), category: entry.category },
-        ];
+        if (!result[key]) result[key] = { kinds: {}, totalCount: 0 };
+        result[key].totalCount += 1;
+        if (!result[key].kinds[entry.kind]) result[key].kinds[entry.kind] = [];
+        result[key].kinds[entry.kind].push({
+          id: entry.id,
+          kind: entry.kind,
+          title: entry.title,
+          time: entry.time,
+          dotColor: ENTITY_DOT_COLORS[entry.kind] ?? getCategoryColor(entry.category),
+          category: entry.category,
+        });
       });
     });
     journals.forEach((j) => {
-      result[j.dateKey] = [
-        ...(result[j.dateKey] ?? []),
-        { id: j.id, kind: "journal", title: j.content.slice(0, 60), time: j.createdAt, dotColor: "#9d6f61", category: "journal" },
-      ];
+      if (!result[j.dateKey]) result[j.dateKey] = { kinds: {}, totalCount: 0 };
+      result[j.dateKey].totalCount += 1;
+      if (!result[j.dateKey].kinds["journal"]) result[j.dateKey].kinds["journal"] = [];
+      result[j.dateKey].kinds["journal"].push({
+        id: j.id,
+        kind: "journal",
+        title: j.content.slice(0, 60),
+        time: j.createdAt,
+        dotColor: ENTITY_DOT_COLORS["journal"],
+        category: "journal",
+      });
     });
     notes.forEach((n) => {
-      result[n.dateKey] = [
-        ...(result[n.dateKey] ?? []),
-        { id: n.id, kind: "note", title: n.title, time: n.createdAt, dotColor: getCategoryColor(n.category), category: n.category },
-      ];
+      if (!result[n.dateKey]) result[n.dateKey] = { kinds: {}, totalCount: 0 };
+      result[n.dateKey].totalCount += 1;
+      if (!result[n.dateKey].kinds["note"]) result[n.dateKey].kinds["note"] = [];
+      result[n.dateKey].kinds["note"].push({
+        id: n.id,
+        kind: "note",
+        title: n.title,
+        time: n.createdAt,
+        dotColor: ENTITY_DOT_COLORS["note"],
+        category: n.category,
+      });
     });
     return result;
   }, [entriesByDate, journals, notes]);
@@ -767,7 +790,7 @@ export function MonthScreenFigma() {
             kind: "event",
             time: toHumanTime(format(eventDate, "HH:mm")),
             title: eventItem.title,
-            bg: "#f8e5c6",
+            bg: "#eef3e6",
             category,
             startMinutes,
             durationMinutes,
@@ -789,7 +812,7 @@ export function MonthScreenFigma() {
             kind: "task",
             time: humanTime,
             title: taskItem.title,
-            bg: "#d1d7d4",
+            bg: "#e8f0f5",
             category,
             startMinutes,
             durationMinutes: 30,
@@ -828,10 +851,10 @@ export function MonthScreenFigma() {
 
   const addButtonStyle =
     view === "day"
-      ? { bg: "#77adc4", text: "#f1f6fa" }
+      ? { bg: "#81acc1", text: "#e8f0f5" }
       : view === "week"
-        ? { bg: "#e6b8ac", text: "#f7ece7" }
-        : { bg: "#f2bc62", text: "#f8e5c6" };
+        ? { bg: "#c18181", text: "#f5eaea" }
+        : { bg: "#b7c181", text: "#eef3e6" };
 
   const currentNodeId =
     view === "week"
@@ -843,6 +866,7 @@ export function MonthScreenFigma() {
           : "1173:4548";
 
   const openCreate = (type?: CreateType, date?: Date, time?: string) => {
+    setDotPopup(null);
     if (date) setSelectedDate(date);
     setCreateState((prev) => ({
       ...prev,
@@ -973,7 +997,7 @@ export function MonthScreenFigma() {
           kind: createState.type,
           time: toHumanTime(nowTime),
           title: createState.title,
-          bg: createState.type === "event" ? "#f8e5c6" : "#d1d7d4",
+          bg: createState.type === "event" ? "#eef3e6" : "#e8f0f5",
           category: selectedCategory === "all" ? "personal" : selectedCategory,
           startMinutes,
           durationMinutes: createState.type === "event" ? 60 : 30,
@@ -998,10 +1022,10 @@ export function MonthScreenFigma() {
   return (
     <div className="min-h-screen w-full bg-[var(--lia-canvas)]">
       <div
-        className="relative h-[1024px] w-full overflow-hidden bg-[var(--lia-canvas)]"
+        className="relative h-screen w-full overflow-hidden bg-[var(--lia-canvas)]"
         data-node-id={currentNodeId}
       >
-        <aside className="absolute left-0 top-0 flex h-[1024px] w-[295px] flex-col border-r border-[var(--lia-border-soft)]">
+        <aside className="absolute left-0 top-0 flex h-full w-[295px] flex-col border-r border-[var(--lia-border-soft)]">
           <Image
             src={imgLogo}
             alt="by Lia"
@@ -1104,36 +1128,37 @@ export function MonthScreenFigma() {
           </div>
         </aside>
 
-        <header className="absolute left-[308px] right-[24px] top-[44px] flex h-[50px] items-center justify-between">
-          <div className="grid min-w-[520px] grid-cols-[1fr_72px] items-center gap-[12px]">
+        <header className="absolute left-[335px] right-[40px] top-[44px] flex h-[50px] items-center justify-between">
+          <div className="flex w-full items-center mr-[78px]">
             <h1
-              className={`leading-none tracking-[-0.01em] ${
-                view === "day" ? "text-[40px] text-[var(--lia-accent-cool)]" : "text-[42px] text-[var(--lia-accent-warm)]"
+              className={`leading-none font-[family-name:var(--font-crimson)] ${
+                view === "day" ? "text-[28px] text-[var(--lia-accent-cool)]" : "text-[28px] text-[var(--lia-accent-warm)]"
               }`}
             >
               {view === "day" ? format(anchorDate, "EEEE, MMMM d, yyyy") : monthLabel}
             </h1>
-            <div className="flex w-[72px] justify-between">
+            <div className="ml-[55px] flex items-center gap-[12px]">
               <button
                 type="button"
                 onClick={() => setAnchorDate((prev) => shiftAnchor(prev, view, -1))}
-                className="grid h-8 w-8 place-items-center rounded-full text-[22px] leading-none text-[var(--lia-muted)] hover:bg-black/5 hover:text-[#3d362d]"
+                className="grid h-12 w-12 place-items-center rounded-full text-[var(--lia-muted)] hover:bg-black/5 hover:text-[#3d362d]"
                 aria-label="Previous"
               >
-                ‹
+                <svg width="11" height="21" viewBox="0 0 11 21" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'rotate(180deg)' }}>
+                  <path d="M0.5 0.5L10.2359 9.88522C10.405 10.0483 10.5 10.2694 10.5 10.5C10.5 10.7306 10.405 10.9517 10.2359 11.1148L0.5 20.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
               <button
                 type="button"
                 onClick={() => setAnchorDate((prev) => shiftAnchor(prev, view, 1))}
-                className="grid h-8 w-8 place-items-center rounded-full text-[22px] leading-none text-[var(--lia-muted)] hover:bg-black/5 hover:text-[#3d362d]"
+                className="grid h-12 w-12 place-items-center rounded-full text-[var(--lia-muted)] hover:bg-black/5 hover:text-[#3d362d]"
                 aria-label="Next"
               >
-                ›
+                <svg width="11" height="21" viewBox="0 0 11 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0.5 0.5L10.2359 9.88522C10.405 10.0483 10.5 10.2694 10.5 10.5C10.5 10.7306 10.405 10.9517 10.2359 11.1148L0.5 20.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => {
@@ -1141,14 +1166,13 @@ export function MonthScreenFigma() {
                 setAnchorDate(now);
                 setSelectedDate(now);
               }}
-              className={`flex h-[40px] w-[123px] items-center justify-center rounded-full border transition hover:shadow-sm ${
-                view === "day"
-                  ? "border-[var(--lia-accent-cool)] text-[var(--lia-accent-cool)] hover:bg-[var(--lia-accent-cool-tint)]"
-                  : "border-[var(--lia-accent-warm)] text-[var(--lia-accent-warm)] hover:bg-[var(--lia-accent-warm-tint)]"
-              }`}
+              className="ml-auto flex h-[50px] w-[176px] items-center justify-center rounded-full border border-[var(--lia-accent-warm)] text-[var(--lia-accent-warm)] transition hover:shadow-sm"
             >
-              <span className="text-[18px] leading-none">today</span>
+              <span className="text-[24px] leading-none font-[family-name:var(--font-crimson)]">today</span>
             </button>
+          </div>
+
+          <div className="flex items-center">
             <CyclePopover
               isOpen={isCycleCardOpen}
               onToggle={() => setCycleCardOpen((prev) => !prev)}
@@ -1157,17 +1181,19 @@ export function MonthScreenFigma() {
             />
             <Link
               href="/settings"
-              className="grid h-10 w-10 place-items-center rounded-full transition hover:bg-black/5"
+              className="ml-[16px] grid h-10 w-10 place-items-center rounded-full transition hover:bg-black/5"
               aria-label="Settings"
             >
               <Image src={imgSettings} alt="" width={24} height={24} unoptimized className="h-[24px] w-[24px]" />
             </Link>
-            <UserMenu />
+            <div className="ml-[24px]">
+              <UserMenu />
+            </div>
           </div>
         </header>
 
         {calendarLoadError && (
-          <p className="lia-slide-in absolute left-[308px] top-[104px] text-[13px] text-[#9b4d4d]">
+          <p className="lia-slide-in absolute left-[335px] top-[104px] text-[13px] text-[#9b4d4d]">
             {calendarLoadError}
           </p>
         )}
@@ -1186,24 +1212,45 @@ export function MonthScreenFigma() {
 
         {view === "month" && (
           <>
-            <div className="absolute left-[304px] right-[24px] top-[138px] grid grid-cols-7">
+            <div
+              className="absolute left-[335px] right-[40px] top-[138px] grid"
+              style={{ gridTemplateColumns: 'repeat(7, minmax(0, 216px))' }}
+            >
               {weekDayLabels.map((label) => (
-                <div key={label} className="flex h-[52px] items-center justify-center">
-                  <span className="text-[12px] font-medium uppercase tracking-[0.22em] text-[var(--lia-muted-soft)]">
+                <div key={label} className="flex h-[60px] items-center justify-center">
+                  <span className="text-[20px] text-[var(--lia-muted)] opacity-70 font-[family-name:var(--font-crimson)]">
                     {label}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="absolute left-[304px] right-[24px] top-[190px] grid grid-cols-7 overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-border-soft)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_32px_-16px_rgba(90,79,62,0.12)]">
+            <div
+              className="absolute left-[335px] right-[40px] top-[190px] bottom-[24px] grid grid-rows-5 divide-x divide-y divide-[var(--lia-border-soft)] overflow-hidden rounded-[14px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_32px_-16px_rgba(90,79,62,0.12)]"
+              style={{ gridTemplateColumns: 'repeat(7, minmax(0, 216px))' }}
+            >
               {monthCells.map((date) => {
                 const isCurrentMonth = isSameMonth(date, anchorDate);
                 const isSelected = isSameDay(date, selectedDate);
                 const dayIsToday = isToday(date);
-                const dots = (dotsByDate[toDateKey(date)] ?? []).filter(
-                  (e) => selectedCategory === "all" || e.category === selectedCategory || e.kind === "journal",
-                );
+                const dayDotsRaw = dotsByDate[toDateKey(date)];
+                let displayDots: DayDotsInfo | null = null;
+                if (dayDotsRaw) {
+                  const filteredKinds: Record<string, DotEntity[]> = {};
+                  let filteredTotal = 0;
+                  for (const [kind, entities] of Object.entries(dayDotsRaw.kinds)) {
+                    const filtered = entities.filter(
+                      (e) => selectedCategory === "all" || e.category === selectedCategory || e.kind === "journal",
+                    );
+                    if (filtered.length > 0) {
+                      filteredKinds[kind] = filtered;
+                      filteredTotal += filtered.length;
+                    }
+                  }
+                  if (Object.keys(filteredKinds).length > 0) {
+                    displayDots = { kinds: filteredKinds, totalCount: filteredTotal };
+                  }
+                }
 
                 return (
                   <div
@@ -1218,7 +1265,7 @@ export function MonthScreenFigma() {
                         setSelectedDate(date);
                       }
                     }}
-                    className="group relative h-[170px] min-w-0 cursor-pointer text-left focus:outline-none"
+                    className="group relative min-h-0 max-h-[176px] min-w-0 max-w-[216px] cursor-pointer text-left focus:outline-none"
                   >
                     <div
                       className="absolute inset-0 transition group-hover:brightness-[0.98]"
@@ -1229,11 +1276,11 @@ export function MonthScreenFigma() {
                     {isSelected && (
                       <div className="pointer-events-none absolute inset-[3px] rounded-[8px] ring-2 ring-inset ring-[var(--lia-accent-warm)]/70" />
                     )}
-                    <div className="absolute left-[12px] top-[10px] flex items-center gap-2">
+                    <div className="absolute left-[17px] top-[14px] flex items-center gap-2">
                       <span
-                        className={`grid h-[26px] min-w-[26px] place-items-center rounded-full px-1.5 text-[15px] ${
+                        className={`text-[20px] ${
                           dayIsToday
-                            ? "bg-[var(--lia-accent-warm)] text-white shadow-sm"
+                            ? "font-medium text-[var(--lia-accent-warm)]"
                             : isCurrentMonth
                               ? "text-[#2f2a22]"
                               : "text-[#b8b0a1]"
@@ -1243,46 +1290,53 @@ export function MonthScreenFigma() {
                       </span>
                     </div>
 
-                    {dots.length > 0 && (
-                      <div className="absolute left-[32px] top-[59px] flex items-center gap-[12px]">
-                        {dots.slice(0, 4).map((dot) => (
-                          <div
-                            key={dot.id}
-                            role="button"
-                            tabIndex={0}
-                            className="h-[16px] w-[16px] shrink-0 cursor-pointer rounded-full transition-transform hover:scale-110 focus:outline-none"
-                            style={{ background: dot.dotColor }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setDotPopup({
-                                date,
-                                kind: dot.kind,
-                                entities: dots.filter((d) => d.kind === dot.kind),
-                                x: rect.right + 10,
-                                y: rect.top - 8,
-                              });
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                const rect = e.currentTarget.getBoundingClientRect();
+                    {displayDots && (() => {
+                      const kindEntries = Object.entries(displayDots.kinds);
+                      const hasOverflow = kindEntries.length === 4 && displayDots.totalCount > kindEntries.length;
+                      const overflow = displayDots.totalCount - kindEntries.length;
+                      return (
+                        <div className="absolute left-[17px] top-[59px] flex items-center gap-[12px]">
+                          {kindEntries.map(([kind, entities]) => (
+                            <div
+                              key={kind}
+                              role="button"
+                              tabIndex={0}
+                              className="h-[16px] w-[16px] shrink-0 cursor-pointer rounded-full transition-transform hover:scale-110 focus:outline-none"
+                              style={{ background: ENTITY_DOT_COLORS[kind] ?? "#b6af9d" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const cellEl = e.currentTarget.closest('[role="button"]');
+                                const cellRect = cellEl!.getBoundingClientRect();
                                 setDotPopup({
                                   date,
-                                  kind: dot.kind,
-                                  entities: dots.filter((d) => d.kind === dot.kind),
-                                  x: rect.right + 10,
-                                  y: rect.top - 8,
+                                  kind: kind as DotEntity["kind"],
+                                  entities,
+                                  x: cellRect.left,
+                                  y: cellRect.bottom + 4,
                                 });
-                              }
-                            }}
-                          />
-                        ))}
-                        {dots.length > 4 && (
-                          <span className="text-[12px] font-light text-[#424242]">+{dots.length - 4}</span>
-                        )}
-                      </div>
-                    )}
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  const cellEl = e.currentTarget.closest('[role="button"]');
+                                  const cellRect = cellEl!.getBoundingClientRect();
+                                  setDotPopup({
+                                    date,
+                                    kind: kind as DotEntity["kind"],
+                                    entities,
+                                    x: cellRect.left,
+                                    y: cellRect.bottom + 4,
+                                  });
+                                }
+                              }}
+                            />
+                          ))}
+                          {hasOverflow && (
+                            <span className="text-[12px] font-light text-[#424242]">+{overflow}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -1292,7 +1346,7 @@ export function MonthScreenFigma() {
 
         {view === "week" && (
           <>
-            <div className="absolute left-[304px] right-[24px] top-[130px] grid grid-cols-7 pl-[48px]">
+            <div className="absolute left-[335px] right-[24px] top-[130px] grid grid-cols-7 pl-[48px]">
               {weekCells.map((date) => {
                 const selected = isSameDay(date, selectedDate);
                 const dayIsToday = isToday(date);
@@ -1333,7 +1387,7 @@ export function MonthScreenFigma() {
         {view === "day" && (
           <>
             {/* Per-tab heading + subtitle */}
-            <div className="absolute left-[304px] top-[100px]">
+            <div className="absolute left-[335px] top-[100px]">
               {dayTab === "calendar" && (
                 <>
                   <h2 className="text-[28px] leading-[1.1] text-[var(--lia-accent-cool)]">Today&apos;s Plan</h2>
@@ -1417,7 +1471,7 @@ export function MonthScreenFigma() {
             )}
 
             {dayTab === "journal" && (
-              <section className="absolute left-[304px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
+              <section className="absolute left-[335px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
                 <div className="h-full overflow-y-auto p-6">
                   <button
                     type="button"
@@ -1453,7 +1507,7 @@ export function MonthScreenFigma() {
             )}
 
             {dayTab === "notes" && (
-              <section className="absolute left-[304px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
+              <section className="absolute left-[335px] right-[24px] top-[160px] bottom-[24px] overflow-hidden rounded-[16px] border border-[var(--lia-border-soft)] bg-[var(--lia-surface)] shadow-[0_1px_2px_rgba(90,79,62,0.04),0_12px_30px_-16px_rgba(90,79,62,0.12)]">
                 <div className="h-full overflow-y-auto p-6">
                   <button
                     type="button"
@@ -1493,17 +1547,17 @@ export function MonthScreenFigma() {
         )}
 
         {dotPopup && (() => {
+          const entityColor = ENTITY_DOT_COLORS[dotPopup.kind] ?? "#b7c181";
           const kindLabel = dotPopup.kind === "event" ? "Events" : dotPopup.kind === "task" ? "Tasks" : dotPopup.kind === "journal" ? "Journal" : "Notes";
           const countLabel = dotPopup.kind === "event" ? "events" : dotPopup.kind === "task" ? "tasks" : dotPopup.kind === "journal" ? "entries" : "notes";
           return (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setDotPopup(null)} />
-              <div
-                className="fixed z-50 w-[258px] overflow-hidden rounded-[12px] border-t-[3px] border-solid border-[#b7c181] bg-[#f4f1ec] font-[family-name:var(--font-crimson)]"
-                style={{ left: dotPopup.x, top: dotPopup.y }}
-              >
+            <div
+              ref={dotPopupRef}
+              className="fixed z-50 w-[258px] overflow-hidden rounded-[12px] border-t-[3px] border-solid bg-[#f4f1ec] font-[family-name:var(--font-crimson)]"
+              style={{ left: dotPopup.x, top: dotPopup.y, borderTopColor: entityColor }}
+            >
                 <div className="flex items-baseline justify-between px-[20px] pb-[16px] pt-[20px]">
-                  <span className="text-[20px] font-medium leading-none text-[#b7c181]">
+                  <span className="text-[20px] font-medium leading-none" style={{ color: entityColor }}>
                     {kindLabel}
                   </span>
                   <span className="text-[12px] text-[#7e7e7e]">
@@ -1515,7 +1569,7 @@ export function MonthScreenFigma() {
                   <div className="flex flex-col gap-[9px]">
                     {dotPopup.entities.map((entity) => (
                       <div key={entity.id} className="flex items-center gap-[8px]">
-                        <span className="h-[10px] w-[10px] shrink-0 rounded-full" style={{ background: entity.dotColor }} />
+                        <span className="h-[10px] w-[10px] shrink-0 rounded-full" style={{ background: entityColor }} />
                         <span className="shrink-0 text-[12px] text-black">{entity.time}</span>
                         <span className="truncate text-[12px] text-black">{entity.title}</span>
                       </div>
@@ -1527,7 +1581,8 @@ export function MonthScreenFigma() {
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
-                      className="text-[14px] text-[#b7c181] transition-opacity hover:opacity-70 focus:outline-none"
+                      className="text-[14px] transition-opacity hover:opacity-70 focus:outline-none"
+                      style={{ color: entityColor }}
                       onClick={() => {
                         setSelectedDate(dotPopup.date);
                         setView("day");
@@ -1536,11 +1591,10 @@ export function MonthScreenFigma() {
                     >
                       View all for {format(dotPopup.date, "d MMM")}
                     </button>
-                    <span className="text-[14px] text-[#b7c181]">→</span>
+                    <span className="text-[14px]" style={{ color: entityColor }}>→</span>
                   </div>
                 </div>
               </div>
-            </>
           );
         })()}
 

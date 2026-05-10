@@ -74,10 +74,10 @@ export function UserMenu() {
         type="button"
         aria-label="Account menu"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-[40px] w-[40px] items-center justify-center overflow-hidden rounded-full ring-2 ring-white/60 transition hover:ring-[var(--lia-accent-warm)]/40"
+        className="flex h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-full transition hover:ring-2 hover:ring-[var(--lia-accent-warm)]/40"
       >
         {me?.imageUrl ? (
-          <Image src={me.imageUrl} alt="" width={40} height={40} unoptimized className="h-[40px] w-[40px]" />
+          <Image src={me.imageUrl} alt="" width={50} height={50} unoptimized className="h-[50px] w-[50px]" />
         ) : me ? (
           <span className="flex h-full w-full items-center justify-center bg-[var(--lia-accent-warm-tint)] text-[14px] font-medium text-[var(--lia-accent-warm)]">
             {initials}
